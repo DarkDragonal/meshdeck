@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Visualizador STL - versão 1.3
+MeshDeck - versão 1.4 (antigo Visualizador STL)
 Abre modelos 3D (.stl, .3mf, .obj, .ply), mostra numa mesa de impressora e deixa
 mover, girar e redimensionar a peça arrastando os controles na própria peça.
 
@@ -329,7 +329,7 @@ def calcular_normais(tris):
     return (n / np.maximum(tam, 1e-12)).astype(np.float32)
 
 
-def salvar_stl(caminho, tris, nome="Visualizador STL"):
+def salvar_stl(caminho, tris, nome="MeshDeck"):
     """Salva os triângulos como STL binário."""
     arr = np.zeros(len(tris), dtype=STL_DTYPE)
     arr["normal"] = calcular_normais(tris)
@@ -723,20 +723,25 @@ OpenGL.ERROR_CHECKING = False
 from OpenGL import GL as gl
 
 from PySide6.QtCore import (Qt, QSettings, QTimer, Signal, QObject, QRunnable, QThreadPool, QSize, QLocale,
-                            QProcess)
+                            QProcess, QRectF, QEvent)
 from PySide6.QtGui import (QSurfaceFormat, QColor, QIcon, QAction, QKeySequence, QPalette, QImage,
-                           QPixmap, QPainter, QFont, QCursor)
+                           QPixmap, QPainter, QFont, QCursor, QPen)
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton, QToolButton, QDoubleSpinBox,
     QCheckBox, QComboBox, QGroupBox, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea,
     QFileDialog, QMessageBox, QColorDialog, QFrame, QTabWidget, QListWidget, QListWidgetItem,
     QListView, QAbstractItemView, QLineEdit, QMenu, QDialog, QDialogButtonBox, QStackedWidget,
-    QButtonGroup, QSizePolicy,
+    QButtonGroup, QSizePolicy, QSlider,
 )
 
-APP_NOME = "Visualizador STL"   # nome interno (registro do Windows, pastas)
-VERSAO = "1.3"
+AUTOR = "DarkDragonal"
+LINK_GITHUB = "https://github.com/DarkDragonal/meshdeck"
+LINK_KOFI = "https://ko-fi.com/darkdragonal"
+APP_NOME = "MeshDeck"   # nome do programa (não se traduz)
+# as pastas de dados e as configurações continuam com o nome antigo "VisualizadorSTL"
+# para quem atualizar não perder o cache de miniaturas nem as preferências
+VERSAO = "1.4"
 COR_DESTAQUE = "#00ae9b"
 CORES_EIXOS = ((0.95, 0.32, 0.32), (0.36, 0.86, 0.36), (0.38, 0.58, 1.0))
 COR_HOVER = (1.0, 0.85, 0.2)
@@ -777,7 +782,7 @@ EXTENSOES_ABRIR = FORMATOS + (".zip",)
 
 
 def nome_app():
-    return T("Visualizador STL")
+    return APP_NOME
 
 
 def filtro_arquivos():
@@ -1828,7 +1833,6 @@ class Pastas(QObject):
             self.lista = [p for p in dados if isinstance(p, str)]
         except (ValueError, TypeError):
             self.lista = []
-        self.sub = bool(cfg.value("biblioteca_sub", True, type=bool))
 
     def _salvar(self):
         self.cfg.setValue("biblioteca_pastas", json.dumps(self.lista))
@@ -1846,36 +1850,60 @@ class Pastas(QObject):
         self._salvar()
         self.mudaram.emit()
 
-    def definir_sub(self, sim):
-        self.sub = bool(sim)
-        self.cfg.setValue("biblioteca_sub", self.sub)
-        self.mudaram.emit()
 
-    def listar(self, pastas, limite=3000):
-        arquivos = []
-        for pasta in pastas:
-            if not os.path.isdir(pasta):
-                continue
-            if self.sub:
-                for raiz, dirs, nomes in os.walk(pasta):
-                    dirs[:] = sorted((d for d in dirs if not d.startswith(".")), key=str.lower)
-                    for n in sorted(nomes, key=str.lower):
-                        if n.lower().endswith(EXTENSOES_ABRIR):
-                            arquivos.append(os.path.join(raiz, n))
-                    if len(arquivos) >= limite:
-                        break
-            else:
+# ---- leitura das pastas (sem janela) ----
+def _e_modelo(nome):
+    return nome.lower().endswith(EXTENSOES_ABRIR)
+
+
+def conteudo_da_pasta(pasta):
+    """Subpastas e modelos que estão direto dentro de uma pasta (sem descer nas subpastas)."""
+    subpastas, modelos = [], []
+    try:
+        with os.scandir(pasta) as it:
+            for e in it:
+                if e.name.startswith((".", "$")):
+                    continue
                 try:
-                    nomes = sorted(os.listdir(pasta), key=str.lower)
+                    if e.is_dir(follow_symlinks=False):
+                        subpastas.append(e.path)
+                    elif e.is_file() and _e_modelo(e.name):
+                        modelos.append(e.path)
                 except OSError:
-                    nomes = []
-                arquivos += [os.path.join(pasta, n) for n in nomes
-                             if n.lower().endswith(EXTENSOES_ABRIR) and os.path.isfile(os.path.join(pasta, n))]
-            if len(arquivos) >= limite:
-                break
-        return arquivos[:limite]
+                    pass
+    except OSError:
+        pass
+    chave = lambda p: os.path.basename(p).lower()
+    return sorted(subpastas, key=chave), sorted(modelos, key=chave)
 
 
+def modelos_dentro(pasta, limite=5000):
+    """Todos os modelos de uma pasta e das subpastas dela (os da própria pasta primeiro)."""
+    achados = []
+    for raiz, dirs, nomes in os.walk(pasta):
+        dirs[:] = sorted((d for d in dirs if not d.startswith((".", "$"))), key=str.lower)
+        for n in sorted(nomes, key=str.lower):
+            if _e_modelo(n):
+                achados.append(os.path.join(raiz, n))
+                if len(achados) >= limite:
+                    return achados
+    return achados
+
+
+def resumo_da_pasta(pasta, limite=5000):
+    """(quantidade de modelos, 4 exemplos para a colagem, bytes, subpastas diretas)"""
+    modelos = modelos_dentro(pasta, limite)
+    total = 0
+    for m in modelos:
+        try:
+            total += os.path.getsize(m)
+        except OSError:
+            pass
+    subpastas, _ = conteudo_da_pasta(pasta)
+    return len(modelos), modelos[:4], total, len(subpastas)
+
+
+# ---- ícones ----
 def _icone_texto(texto, cor="#5a5f66"):
     pm = QPixmap(TAM_MINIATURA, TAM_MINIATURA)
     pm.fill(Qt.GlobalColor.transparent)
@@ -1894,6 +1922,59 @@ def _icone_texto(texto, cor="#5a5f66"):
     return QIcon(pm)
 
 
+def pixmap_pasta(pngs, tam=TAM_MINIATURA):
+    """Desenha uma pasta com as miniaturas de até 4 modelos de dentro (1, 2, 3 ou 4 espaços)."""
+    pm = QPixmap(tam, tam)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    m = tam * 0.06
+    aba_alt = tam * 0.09
+    raio = tam * 0.05
+    amarelo = QColor("#d4a72c")
+    # aba da pasta
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(amarelo)
+    p.drawRoundedRect(QRectF(m, m + tam * 0.04, tam * 0.42, aba_alt * 1.8), raio, raio)
+    # corpo
+    corpo = QRectF(m, m + tam * 0.04 + aba_alt, tam - 2 * m, tam - 2 * m - tam * 0.04 - aba_alt)
+    p.setBrush(QColor("#3b3322"))
+    p.setPen(QPen(amarelo, max(2.0, tam / 64)))
+    p.drawRoundedRect(corpo, raio, raio)
+    # miniaturas: 1 = inteira, 2 = lado a lado, 3 = uma grande + duas empilhadas, 4 = grade 2x2
+    folga = tam * 0.04
+    x0, y0 = corpo.x() + folga, corpo.y() + folga
+    larg, alt = corpo.width() - 2 * folga, corpo.height() - 2 * folga
+    meia_l, meia_a = (larg - folga) / 2, (alt - folga) / 2
+    qtd = min(len(pngs), 4)
+    if qtd <= 1:
+        celulas = [QRectF(x0, y0, larg, alt)]
+    elif qtd == 2:
+        celulas = [QRectF(x0, y0, meia_l, alt), QRectF(x0 + meia_l + folga, y0, meia_l, alt)]
+    elif qtd == 3:
+        celulas = [QRectF(x0, y0, meia_l, alt),
+                   QRectF(x0 + meia_l + folga, y0, meia_l, meia_a),
+                   QRectF(x0 + meia_l + folga, y0 + meia_a + folga, meia_l, meia_a)]
+    else:
+        celulas = [QRectF(x0 + (i % 2) * (meia_l + folga), y0 + (i // 2) * (meia_a + folga), meia_l, meia_a)
+                   for i in range(4)]
+    p.setPen(Qt.PenStyle.NoPen)
+    for i, cel in enumerate(celulas):
+        p.setBrush(QColor("#17191c"))
+        p.drawRoundedRect(cel, raio * 0.6, raio * 0.6)
+        if i < len(pngs) and pngs[i]:
+            img = QPixmap(pngs[i])
+            if not img.isNull():
+                img = img.scaled(int(cel.width()), int(cel.height()), Qt.AspectRatioMode.KeepAspectRatio,
+                                 Qt.TransformationMode.SmoothTransformation)
+                p.drawPixmap(int(cel.x() + (cel.width() - img.width()) / 2),
+                             int(cel.y() + (cel.height() - img.height()) / 2), img)
+    p.end()
+    return pm
+
+
+# ---- menus ----
 def _menu_arquivos(parent, caminhos, abrir, adicionar):
     """Menu do botão direito em modelos da biblioteca."""
     menu = QMenu(parent)
@@ -1912,31 +1993,295 @@ def _menu_arquivos(parent, caminhos, abrir, adicionar):
         mostrar_na_pasta(caminhos[0])
 
 
+def _confirmar_muitos(parent, n):
+    if n <= 20:
+        return True
+    r = QMessageBox.question(parent, nome_app(),
+                             T("Abrir {n} modelos de uma vez? Isso pode demorar um pouco.", n=num(n, 0)),
+                             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                             QMessageBox.StandardButton.No)
+    return r == QMessageBox.StandardButton.Yes
+
+
+def _menu_pasta(parent, pasta, entrar, abrir, adicionar):
+    """Menu do botão direito numa pasta da biblioteca."""
+    menu = QMenu(parent)
+    a_entrar = menu.addAction(T("Entrar na pasta"))
+    menu.addSeparator()
+    a_abrir = menu.addAction(T("Abrir todos juntos"))
+    a_add = menu.addAction(T("Adicionar todos à mesa"))
+    a_explorer = None
+    if sys.platform == "win32":
+        menu.addSeparator()
+        a_explorer = menu.addAction(T("Mostrar no Explorer"))
+    escolha = menu.exec(QCursor.pos())
+    if escolha is a_entrar:
+        entrar(pasta)
+    elif escolha in (a_abrir, a_add):
+        modelos = modelos_dentro(pasta)
+        if modelos and _confirmar_muitos(parent, len(modelos)):
+            (abrir if escolha is a_abrir else adicionar)(modelos)
+    elif a_explorer is not None and escolha is a_explorer:
+        abrir_no_explorer(pasta)
+
+
 def mostrar_na_pasta(caminho):
     if sys.platform == "win32":
         subprocess.Popen(f'explorer /select,"{os.path.normpath(caminho)}"')
 
 
-class Biblioteca(QWidget):
-    """Tela Biblioteca: pastas, grade de miniaturas e painel de detalhes."""
+def abrir_no_explorer(pasta):
+    if sys.platform == "win32":
+        subprocess.Popen(["explorer", os.path.normpath(pasta)])
+
+
+PAPEL_TIPO = Qt.ItemDataRole.UserRole + 1   # "modelo" ou "pasta"
+
+
+class NavegadorPastas:
+    """
+    Lógica de navegação compartilhada pela tela Biblioteca e pela aba Biblioteca:
+    raiz escolhida, pasta atual, itens (pastas primeiro, depois modelos) e miniaturas.
+    A classe que usa precisa ter: self.lista (QListWidget), self.mini, self.pastas, self.busca.
+    """
+    MAX_ARQUIVOS = 3000
+
+    def _iniciar_navegacao(self):
+        self.atual = None          # None = "Todas as pastas" (mostra cada pasta da biblioteca)
+        self.itens = {}            # caminho do modelo -> item
+        self.pastas_itens = {}     # caminho da pasta -> (item, exemplos)
+        self._icone_espera = _icone_texto("…")
+        self._icone_erro = _icone_texto("?", "#ff7a7a")
+        self._em_busca = False
+        self._timer_busca = QTimer()
+        self._timer_busca.setSingleShot(True)
+        self._timer_busca.setInterval(300)
+        self._timer_busca.timeout.connect(self.carregar)
+
+    # --- onde estou ---
+    def raizes(self):
+        return list(self.pastas.lista)
+
+    def raiz_de(self, caminho):
+        if caminho is None:
+            return None
+        norm = os.path.normcase(os.path.normpath(caminho))
+        for r in self.raizes():
+            rn = os.path.normcase(os.path.normpath(r))
+            if norm == rn or norm.startswith(rn + os.sep):
+                return r
+        return None
+
+    def pode_voltar(self):
+        if self.atual is None:
+            return False
+        if self.raiz_de(self.atual) == self.atual:
+            return len(self.raizes()) > 1 and self.raiz_escolhida() is None
+        return True
+
+    def pai(self):
+        if self.atual is None:
+            return None
+        if self.raiz_de(self.atual) == self.atual:
+            return None
+        return os.path.dirname(self.atual)
+
+    def entrar(self, pasta):
+        self.atual = pasta
+        self.busca.blockSignals(True)
+        self.busca.clear()
+        self.busca.blockSignals(False)
+        self.carregar()
+
+    def voltar(self):
+        if self.pode_voltar():
+            self.entrar(self.pai())
+
+    def _busca_mudou(self, *_):
+        self._timer_busca.start()
+
+    def _ligar_atalhos_voltar(self):
+        """Backspace e o botão lateral "voltar" do mouse também voltam uma pasta."""
+        self.lista.installEventFilter(self)
+        self.lista.viewport().installEventFilter(self)
+
+    def _filtro_voltar(self, obj, ev):
+        tipo = ev.type()
+        if tipo == QEvent.Type.KeyPress and ev.key() == Qt.Key.Key_Backspace and not self._em_busca:
+            self.voltar()
+            return True
+        if tipo == QEvent.Type.MouseButtonPress and ev.button() == Qt.MouseButton.BackButton:
+            self.voltar()
+            return True
+        return False
+
+    def _atualizar_botao_voltar(self):
+        self.b_voltar.setEnabled(self.pode_voltar() and not self._em_busca)
+
+    # --- preencher a lista ---
+    def _adicionar_pasta(self, pasta, nome=None):
+        qtd, exemplos, _total, _subs = resumo_da_pasta(pasta, 2000)
+        if qtd == 0:
+            return None
+        texto = f"{nome or os.path.basename(pasta.rstrip(chr(92) + '/')) or pasta}\n{T('Modelos: {n}', n=num(qtd, 0))}"
+        it = QListWidgetItem(texto)
+        it.setData(Qt.ItemDataRole.UserRole, pasta)
+        it.setData(PAPEL_TIPO, "pasta")
+        it.setToolTip(pasta)
+        self.lista.addItem(it)
+        self.pastas_itens[pasta] = (it, exemplos)
+        for ex in exemplos:
+            self.mini.pedir(ex)
+        self._pintar_pasta(pasta)
+        return it
+
+    def _pintar_pasta(self, pasta):
+        it, exemplos = self.pastas_itens[pasta]
+        pngs = []
+        for ex in exemplos:
+            png = self.mini.caminho_cache(ex)
+            pngs.append(png if png and os.path.isfile(png) else None)
+        it.setIcon(QIcon(pixmap_pasta(pngs)))
+
+    def _adicionar_modelo(self, caminho):
+        it = QListWidgetItem(self._icone_espera, os.path.basename(caminho))
+        it.setData(Qt.ItemDataRole.UserRole, caminho)
+        it.setData(PAPEL_TIPO, "modelo")
+        it.setToolTip(caminho)
+        self.lista.addItem(it)
+        self.itens[caminho] = it
+        png = self.mini.pedir(caminho)
+        if png == "":
+            it.setIcon(self._icone_erro)
+        elif png:
+            it.setIcon(QIcon(png))
+
+    def _preencher(self):
+        """Monta a lista; devolve a quantidade de modelos mostrados."""
+        self.lista.clear()
+        self.itens = {}
+        self.pastas_itens = {}
+        termo = self.busca.text().strip().lower()
+        self._em_busca = bool(termo)
+        if self.atual is not None and not os.path.isdir(self.atual):
+            self.atual = self.raiz_escolhida()
+        if self.atual is None and self.raiz_escolhida() is not None:
+            self.atual = self.raiz_escolhida()
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            if termo:   # busca: procura em todas as subpastas e mostra só os modelos achados
+                base = [self.atual] if self.atual else self.raizes()
+                n = 0
+                for b in base:
+                    for c in modelos_dentro(b, self.MAX_ARQUIVOS * 4):
+                        if termo in os.path.basename(c).lower():
+                            self._adicionar_modelo(c)
+                            n += 1
+                            if n >= self.MAX_ARQUIVOS:
+                                return n
+                return n
+            if self.atual is None:   # "Todas as pastas": cada pasta da biblioteca vira um item
+                for r in self.raizes():
+                    if os.path.isdir(r):
+                        self._adicionar_pasta(r)
+                return 0
+            subpastas, modelos = conteudo_da_pasta(self.atual)
+            for s in subpastas:
+                self._adicionar_pasta(s)
+            for c in modelos[:self.MAX_ARQUIVOS]:
+                self._adicionar_modelo(c)
+            return len(modelos)
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def _miniatura_chegou(self, caminho, png):
+        it = self.itens.get(caminho)
+        if it is not None:
+            it.setIcon(QIcon(png) if png else self._icone_erro)
+        for pasta, (_it, exemplos) in list(self.pastas_itens.items()):
+            if caminho in exemplos:
+                self._pintar_pasta(pasta)
+
+    def _duplo_clique(self, it):
+        tipo = it.data(PAPEL_TIPO)
+        if tipo == "pasta":
+            self.entrar(it.data(Qt.ItemDataRole.UserRole))
+        else:
+            self.abrir_pedido.emit([it.data(Qt.ItemDataRole.UserRole)])
+
+    def _menu(self, pos):
+        it = self.lista.itemAt(pos)
+        if it is None:
+            return
+        if it.data(PAPEL_TIPO) == "pasta":
+            self.lista.clearSelection()
+            it.setSelected(True)
+            _menu_pasta(self, it.data(Qt.ItemDataRole.UserRole), self.entrar,
+                        self.abrir_pedido.emit, self.adicionar_pedido.emit)
+            return
+        if not it.isSelected():
+            self.lista.clearSelection()
+            it.setSelected(True)
+        caminhos = [i.data(Qt.ItemDataRole.UserRole) for i in self.lista.selectedItems()
+                    if i.data(PAPEL_TIPO) == "modelo"]
+        if caminhos:
+            _menu_arquivos(self, caminhos, self.abrir_pedido.emit, self.adicionar_pedido.emit)
+
+    def _caminho_html(self):
+        """Caminho clicável: Pasta › Subpasta › Atual"""
+        if self._em_busca:
+            return f"<b>{T('Resultados da busca')}</b>"
+        if self.atual is None:
+            return f"<b>{T('Todas as pastas')}</b>"
+        raiz = self.raiz_de(self.atual) or self.atual
+        partes = []
+        if len(self.raizes()) > 1 and self.raiz_escolhida() is None:
+            partes.append(("*", T("Todas as pastas")))
+        partes.append((raiz, os.path.basename(raiz.rstrip("\\/")) or raiz))
+        rel = os.path.relpath(self.atual, raiz)
+        if rel != ".":
+            acumulado = raiz
+            for pedaco in rel.split(os.sep):
+                acumulado = os.path.join(acumulado, pedaco)
+                partes.append((acumulado, pedaco))
+        html = []
+        for i, (destino, nome) in enumerate(partes):
+            nome = nome.replace("&", "&amp;").replace("<", "&lt;")
+            if i == len(partes) - 1:
+                html.append(f"<b>{nome}</b>")
+            else:
+                html.append(f'<a href="{destino}" style="color:{COR_DESTAQUE}; text-decoration:none">{nome}</a>')
+        return "  ›  ".join(html)
+
+    def _caminho_clicado(self, destino):
+        self.entrar(None if destino == "*" else destino)
+
+
+class Biblioteca(QWidget, NavegadorPastas):
+    """Tela Biblioteca: pastas, grade de miniaturas (pastas e modelos) e painel de detalhes."""
     abrir_pedido = Signal(list)
     adicionar_pedido = Signal(list)
-    MAX_ARQUIVOS = 3000
 
     def __init__(self, pastas, miniaturas):
         super().__init__()
         self.pastas = pastas
         self.mini = miniaturas
-        self.mini.pronta.connect(self._miniatura_pronta)
-        self.mini.cache_limpo.connect(self._cache_limpo)
-        self.pastas.mudaram.connect(self._pastas_mudaram)
-        self.itens = {}
         self._carregada = False
         self._escolher = None
         self._detalhe = None
-        self._icone_espera = _icone_texto("…")
-        self._icone_erro = _icone_texto("?", "#ff7a7a")
         self._montar()
+        cfg = self.pastas.cfg
+        self.grupo_modo.button(1 if str(cfg.value("biblioteca_modo", "miniaturas")) == "lista" else 0).setChecked(True)
+        self.sl_tam.blockSignals(True)
+        self.sl_tam.setValue(int(cfg.value("biblioteca_tamanho", 128, type=int)))
+        self.sl_tam.blockSignals(False)
+        self._aplicar_visual()
+        self._iniciar_navegacao()
+        self._ligar_atalhos_voltar()
+        self.mini.pronta.connect(self._miniatura_pronta)
+        self.mini.cache_limpo.connect(self._cache_limpo)
+        self.pastas.mudaram.connect(self._pastas_mudaram)
         self._preencher_pastas()
 
     # ---- tela ----
@@ -1954,7 +2299,7 @@ class Biblioteca(QWidget):
         titulo.setObjectName("titulo")
         v.addWidget(titulo)
         self.lista_pastas = QListWidget()
-        self.lista_pastas.currentRowChanged.connect(lambda _r: self.carregar())
+        self.lista_pastas.currentRowChanged.connect(self._raiz_mudou)
         v.addWidget(self.lista_pastas, 1)
         linha = QHBoxLayout()
         b = QPushButton(T("Adicionar pasta…"))
@@ -1966,10 +2311,6 @@ class Biblioteca(QWidget):
         b.clicked.connect(self.remover_pasta)
         linha.addWidget(b)
         v.addLayout(linha)
-        self.cb_sub = QCheckBox(T("Incluir subpastas"))
-        self.cb_sub.setChecked(self.pastas.sub)
-        self.cb_sub.toggled.connect(self.pastas.definir_sub)
-        v.addWidget(self.cb_sub)
         linha_cache = QFrame()
         linha_cache.setObjectName("divisoria")
         v.addWidget(linha_cache)
@@ -1986,11 +2327,24 @@ class Biblioteca(QWidget):
         meio = QVBoxLayout()
         meio.setSpacing(8)
         linha = QHBoxLayout()
+        self.b_voltar = QToolButton()
+        self.b_voltar.setText("←")
+        self.b_voltar.setObjectName("navegar")
+        self.b_voltar.setToolTip(T("Voltar para a pasta anterior"))
+        self.b_voltar.clicked.connect(self.voltar)
+        linha.addWidget(self.b_voltar)
+        self.lb_caminho = QLabel("")
+        self.lb_caminho.setTextFormat(Qt.TextFormat.RichText)
+        self.lb_caminho.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self.lb_caminho.linkActivated.connect(self._caminho_clicado)
+        self.lb_caminho.setMinimumWidth(80)
+        linha.addWidget(self.lb_caminho, 1)
         self.busca = QLineEdit()
         self.busca.setPlaceholderText(T("Buscar por nome…"))
         self.busca.setClearButtonEnabled(True)
-        self.busca.textChanged.connect(self._filtrar)
-        linha.addWidget(self.busca, 1)
+        self.busca.setFixedWidth(260)
+        self.busca.textChanged.connect(self._busca_mudou)
+        linha.addWidget(self.busca)
         self.lb_qtd = QLabel("")
         self.lb_qtd.setObjectName("fraco")
         linha.addWidget(self.lb_qtd)
@@ -1999,27 +2353,54 @@ class Biblioteca(QWidget):
         linha.addWidget(b)
         meio.addLayout(linha)
 
+        # modo de exibição e tamanho (como no Explorer)
+        linha = QHBoxLayout()
+        linha.setSpacing(0)
+        self.grupo_modo = QButtonGroup(self)
+        for i, (texto, dica) in enumerate(((T("Miniaturas"), T("Mostrar como miniaturas")),
+                                           (T("Lista"), T("Mostrar como lista")))):
+            b = QToolButton()
+            b.setText(texto)
+            b.setToolTip(dica)
+            b.setCheckable(True)
+            b.setObjectName("segmento_esq" if i == 0 else "segmento_dir")
+            self.grupo_modo.addButton(b, i)
+            linha.addWidget(b)
+        self.grupo_modo.idClicked.connect(lambda _i: self._aplicar_visual())
+        linha.addSpacing(16)
+        pequeno = QLabel("▫")
+        pequeno.setObjectName("fraco")
+        linha.addWidget(pequeno)
+        linha.addSpacing(6)
+        self.sl_tam = QSlider(Qt.Orientation.Horizontal)
+        self.sl_tam.setRange(48, 256)
+        self.sl_tam.setSingleStep(16)
+        self.sl_tam.setPageStep(32)
+        self.sl_tam.setFixedWidth(170)
+        self.sl_tam.setToolTip(T("Tamanho das miniaturas (Ctrl + roda do mouse)"))
+        self.sl_tam.valueChanged.connect(lambda _v: self._aplicar_visual())
+        linha.addWidget(self.sl_tam)
+        linha.addSpacing(6)
+        grande = QLabel("◻")
+        grande.setObjectName("fraco")
+        grande.setStyleSheet("font-size: 17px;")
+        linha.addWidget(grande)
+        linha.addStretch(1)
+        meio.addLayout(linha)
+
         self.pilha = QStackedWidget()
         vazio = QLabel(T("Nenhuma pasta na biblioteca.\nUse “Adicionar pasta…” para começar."))
         vazio.setAlignment(Qt.AlignmentFlag.AlignCenter)
         vazio.setStyleSheet("color: #8a8f96; font-size: 16px;")
         self.pilha.addWidget(vazio)
-        self.grade = QListWidget()
-        self.grade.setObjectName("grade")
-        self.grade.setViewMode(QListView.ViewMode.IconMode)
-        self.grade.setIconSize(QSize(128, 128))
-        self.grade.setGridSize(QSize(158, 184))
-        self.grade.setResizeMode(QListView.ResizeMode.Adjust)
-        self.grade.setMovement(QListView.Movement.Static)
-        self.grade.setWordWrap(True)
-        self.grade.setUniformItemSizes(True)
-        self.grade.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.grade.itemDoubleClicked.connect(lambda it: self.abrir_pedido.emit([it.data(Qt.ItemDataRole.UserRole)]))
-        self.grade.currentItemChanged.connect(lambda it, _ant: self._mostrar_detalhes(
-            it.data(Qt.ItemDataRole.UserRole) if it else None))
-        self.grade.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.grade.customContextMenuRequested.connect(self._menu)
-        self.pilha.addWidget(self.grade)
+        self.lista = QListWidget()
+        self.lista.setObjectName("grade")
+        self.lista.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.lista.itemDoubleClicked.connect(self._duplo_clique)
+        self.lista.currentItemChanged.connect(lambda it, _ant: self._mostrar_detalhes(it))
+        self.lista.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lista.customContextMenuRequested.connect(self._menu)
+        self.pilha.addWidget(self.lista)
         meio.addWidget(self.pilha, 1)
         dica = QLabel(T("Duplo clique: abrir   ·   Botão direito: mais opções"))
         dica.setObjectName("fraco")
@@ -2054,24 +2435,59 @@ class Biblioteca(QWidget):
         self.det_info.setWordWrap(True)
         v.addWidget(self.det_info)
         v.addStretch(1)
-        self.det_abrir = QPushButton(T("Abrir"))
-        self.det_abrir.setObjectName("principal")
-        self.det_abrir.clicked.connect(lambda: self._detalhe and self.abrir_pedido.emit([self._detalhe]))
-        v.addWidget(self.det_abrir)
-        self.det_add = QPushButton(T("Adicionar à mesa"))
-        self.det_add.clicked.connect(lambda: self._detalhe and self.adicionar_pedido.emit([self._detalhe]))
-        v.addWidget(self.det_add)
-        self.det_pasta_b = QPushButton(T("Mostrar na pasta"))
-        self.det_pasta_b.clicked.connect(lambda: self._detalhe and mostrar_na_pasta(self._detalhe))
-        self.det_pasta_b.setVisible(sys.platform == "win32")
-        v.addWidget(self.det_pasta_b)
+        self.det_b1 = QPushButton("")
+        self.det_b1.setObjectName("principal")
+        self.det_b1.clicked.connect(lambda: self._acao_detalhe(1))
+        v.addWidget(self.det_b1)
+        self.det_b2 = QPushButton("")
+        self.det_b2.clicked.connect(lambda: self._acao_detalhe(2))
+        v.addWidget(self.det_b2)
+        self.det_b3 = QPushButton("")
+        self.det_b3.clicked.connect(lambda: self._acao_detalhe(3))
+        self.det_b3.setVisible(sys.platform == "win32")
+        v.addWidget(self.det_b3)
         lay.addWidget(det)
         self._mostrar_detalhes(None)
 
-    # ---- pastas ----
+    def eventFilter(self, obj, ev):
+        # Ctrl + roda do mouse muda o tamanho, como no Explorer
+        if ev.type() == QEvent.Type.Wheel and ev.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            passo = 16 if ev.angleDelta().y() > 0 else -16
+            self.sl_tam.setValue(self.sl_tam.value() + passo)
+            return True
+        return self._filtro_voltar(obj, ev) or super().eventFilter(obj, ev)
+
+    def _aplicar_visual(self):
+        tam = self.sl_tam.value()
+        lista = self.grupo_modo.checkedId() == 1
+        self.lista.setViewMode(QListView.ViewMode.ListMode if lista else QListView.ViewMode.IconMode)
+        self.lista.setMovement(QListView.Movement.Static)
+        self.lista.setResizeMode(QListView.ResizeMode.Adjust)
+        self.lista.setUniformItemSizes(True)
+        if lista:
+            icone = max(24, tam // 3)
+            self.lista.setWrapping(False)
+            self.lista.setWordWrap(False)
+            self.lista.setGridSize(QSize())
+            self.lista.setSpacing(1)
+            self.lista.setIconSize(QSize(icone, icone))
+        else:
+            self.lista.setWrapping(True)
+            self.lista.setWordWrap(True)
+            self.lista.setSpacing(0)
+            self.lista.setIconSize(QSize(tam, tam))
+            self.lista.setGridSize(QSize(max(tam + 30, 110), tam + (68 if tam >= 80 else 60)))
+        self.sl_tam.setToolTip(T("Tamanho das miniaturas (Ctrl + roda do mouse)") + f"  ·  {tam} px")
+        self.pastas.cfg.setValue("biblioteca_modo", "lista" if lista else "miniaturas")
+        self.pastas.cfg.setValue("biblioteca_tamanho", tam)
+
+    # ---- pastas da biblioteca (lista da esquerda) ----
+    def raiz_escolhida(self):
+        it = self.lista_pastas.currentItem()
+        return it.data(Qt.ItemDataRole.UserRole) if it else None
+
     def _preencher_pastas(self):
-        atual = self.lista_pastas.currentItem()
-        manter = self._escolher or (atual.data(Qt.ItemDataRole.UserRole) if atual else None)
+        manter = self._escolher or self.raiz_escolhida()
         self._escolher = None
         self.lista_pastas.blockSignals(True)
         self.lista_pastas.clear()
@@ -2090,11 +2506,16 @@ class Biblioteca(QWidget):
         if self.lista_pastas.count():
             self.lista_pastas.setCurrentRow(linha)
         self.lista_pastas.blockSignals(False)
+        self.atual = self.raiz_escolhida()
+
+    def _raiz_mudou(self, _linha):
+        self.atual = self.raiz_escolhida()
+        self.busca.blockSignals(True)
+        self.busca.clear()
+        self.busca.blockSignals(False)
+        self.carregar()
 
     def _pastas_mudaram(self):
-        self.cb_sub.blockSignals(True)
-        self.cb_sub.setChecked(self.pastas.sub)
-        self.cb_sub.blockSignals(False)
         self._preencher_pastas()
         if self._carregada:
             self.carregar()
@@ -2106,23 +2527,46 @@ class Biblioteca(QWidget):
             self.pastas.adicionar(pasta)
 
     def remover_pasta(self):
-        it = self.lista_pastas.currentItem()
-        p = it.data(Qt.ItemDataRole.UserRole) if it else None
+        p = self.raiz_escolhida()
         if p:
             self.pastas.remover(p)
 
-    def _pastas_escolhidas(self):
-        it = self.lista_pastas.currentItem()
-        p = it.data(Qt.ItemDataRole.UserRole) if it else None
-        return [p] if p else list(self.pastas.lista)
-
-    # ---- arquivos e miniaturas ----
+    # ---- carregar ----
     def mostrar(self):
         if not self._carregada:
             self._carregada = True
             self.carregar()
         self._mostrar_cache()
 
+    def carregar(self):
+        self._mostrar_detalhes(None)
+        if not self.pastas.lista:
+            self.lista.clear()
+            self.pilha.setCurrentIndex(0)
+            self.lb_qtd.setText("")
+            self.lb_caminho.setText("")
+            self.b_voltar.setEnabled(False)
+            return
+        self.pilha.setCurrentIndex(1)
+        n = self._preencher()
+        self._atualizar_botao_voltar()
+        self.lb_caminho.setText(self._caminho_html())
+        extra = " " + T("(limite de {n})", n=num(self.MAX_ARQUIVOS, 0)) if n >= self.MAX_ARQUIVOS else ""
+        if self._em_busca or n:
+            self.lb_qtd.setText(T("Modelos: {n}", n=num(n, 0)) + extra)
+        else:
+            self.lb_qtd.setText("")
+
+    def _miniatura_pronta(self, caminho, png):
+        self._miniatura_chegou(caminho, png)
+        if self.isVisible() and not self.mini._pendentes:
+            self._mostrar_cache()
+        if self._detalhe and (caminho == self._detalhe[1] or
+                              (self._detalhe[0] == "pasta" and self._detalhe[1] in self.pastas_itens
+                               and caminho in self.pastas_itens[self._detalhe[1]][1])):
+            self._mostrar_detalhes(self.lista.currentItem())
+
+    # ---- cache ----
     def _mostrar_cache(self):
         qtd, total = self.mini.tamanho_cache()
         self.lb_cache.setText(T("Miniaturas em cache: {n} ({mb} MB)", n=num(qtd, 0), mb=num(total / (1024 * 1024), 1))
@@ -2151,63 +2595,69 @@ class Biblioteca(QWidget):
             self.carregar()
         self._mostrar_cache()
 
-    def carregar(self):
-        self.grade.clear()
-        self.itens = {}
-        self._mostrar_detalhes(None)
-        if not self.pastas.lista:
-            self.pilha.setCurrentIndex(0)
-            self.lb_qtd.setText("")
+    # ---- detalhes ----
+    def _acao_detalhe(self, botao):
+        if not self._detalhe:
             return
-        self.pilha.setCurrentIndex(1)
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            arquivos = self.pastas.listar(self._pastas_escolhidas(), self.MAX_ARQUIVOS)
-        finally:
-            QApplication.restoreOverrideCursor()
-        for c in arquivos:
-            it = QListWidgetItem(self._icone_espera, os.path.basename(c))
-            it.setData(Qt.ItemDataRole.UserRole, c)
-            it.setToolTip(c)
-            self.grade.addItem(it)
-            self.itens[c] = it
-            png = self.mini.pedir(c)
-            if png == "":
-                it.setIcon(self._icone_erro)
-            elif png:
-                it.setIcon(QIcon(png))
-        self._filtrar()
+        tipo, caminho = self._detalhe
+        if tipo == "pasta":
+            if botao == 1:
+                self.entrar(caminho)
+            elif botao == 2:
+                modelos = modelos_dentro(caminho)
+                if modelos and _confirmar_muitos(self, len(modelos)):
+                    self.adicionar_pedido.emit(modelos)
+            else:
+                abrir_no_explorer(caminho)
+        else:
+            if botao == 1:
+                self.abrir_pedido.emit([caminho])
+            elif botao == 2:
+                self.adicionar_pedido.emit([caminho])
+            else:
+                mostrar_na_pasta(caminho)
 
-    def _miniatura_pronta(self, caminho, png):
-        it = self.itens.get(caminho)
-        if it is not None:
-            it.setIcon(QIcon(png) if png else self._icone_erro)
-        if self.isVisible() and not self.mini._pendentes:
-            self._mostrar_cache()
-        if caminho == self._detalhe:
-            self._mostrar_detalhes(caminho)
-
-    def _filtrar(self, *_):
-        t = self.busca.text().strip().lower()
-        n = 0
-        for c, it in self.itens.items():
-            mostra = t in os.path.basename(c).lower()
-            it.setHidden(not mostra)
-            n += mostra
-        extra = " " + T("(limite de {n})", n=num(self.MAX_ARQUIVOS, 0)) if len(self.itens) >= self.MAX_ARQUIVOS else ""
-        self.lb_qtd.setText(T("Modelos: {n}", n=num(n, 0)) + extra)
-
-    def _mostrar_detalhes(self, caminho):
-        self._detalhe = caminho
-        for b in (self.det_abrir, self.det_add, self.det_pasta_b):
-            b.setEnabled(caminho is not None)
-        if caminho is None:
+    def _mostrar_detalhes(self, it):
+        tipo = it.data(PAPEL_TIPO) if it is not None else None
+        caminho = it.data(Qt.ItemDataRole.UserRole) if it is not None else None
+        if tipo not in ("modelo", "pasta") or not caminho:
+            self._detalhe = None
+            for b in (self.det_b1, self.det_b2, self.det_b3):
+                b.setEnabled(False)
+            self.det_b1.setText(T("Abrir"))
+            self.det_b2.setText(T("Adicionar à mesa"))
+            self.det_b3.setText(T("Mostrar na pasta"))
             self.det_img.setPixmap(QPixmap())
             self.det_img.setText(T("Selecione um modelo\npara ver os detalhes"))
             self.det_nome.setText("")
             self.det_pasta.setText("")
             self.det_info.setText("")
             return
+        self._detalhe = (tipo, caminho)
+        for b in (self.det_b1, self.det_b2, self.det_b3):
+            b.setEnabled(True)
+        self.det_nome.setText(os.path.basename(caminho.rstrip("\\/")) or caminho)
+        self.det_pasta.setText(os.path.dirname(caminho))
+        linhas = []
+        if tipo == "pasta":
+            self.det_b1.setText(T("Entrar na pasta"))
+            self.det_b2.setText(T("Adicionar todos à mesa"))
+            self.det_b3.setText(T("Mostrar no Explorer"))
+            qtd, exemplos, total, subs = resumo_da_pasta(caminho)
+            pngs = []
+            for ex in exemplos:
+                png = self.mini.caminho_cache(ex)
+                pngs.append(png if png and os.path.isfile(png) else None)
+            self.det_img.setText("")
+            self.det_img.setPixmap(pixmap_pasta(pngs, 246))
+            linhas.append(f"<b>{T('Modelos 3D')}:</b> {num(qtd, 0)}")
+            linhas.append(f"<b>{T('Subpastas')}:</b> {num(subs, 0)}")
+            linhas.append(f"<b>{T('Tamanho total')}:</b> {num(total / (1024 * 1024), 1)} MB")
+            self.det_info.setText("<br>".join(linhas))
+            return
+        self.det_b1.setText(T("Abrir"))
+        self.det_b2.setText(T("Adicionar à mesa"))
+        self.det_b3.setText(T("Mostrar na pasta"))
         png = self.mini.caminho_cache(caminho)
         if png and os.path.isfile(png):
             self.det_img.setText("")
@@ -2216,9 +2666,6 @@ class Biblioteca(QWidget):
         else:
             self.det_img.setPixmap(QPixmap())
             self.det_img.setText(T("Gerando miniatura…"))
-        self.det_nome.setText(os.path.basename(caminho))
-        self.det_pasta.setText(os.path.dirname(caminho))
-        linhas = []
         info = self.mini.info(caminho)
         if info:
             d = info.get("dim", [0, 0, 0])
@@ -2238,19 +2685,9 @@ class Biblioteca(QWidget):
             pass
         self.det_info.setText("<br>".join(linhas))
 
-    def _menu(self, pos):
-        it = self.grade.itemAt(pos)
-        if it is None:
-            return
-        if not it.isSelected():
-            self.grade.clearSelection()
-            it.setSelected(True)
-        caminhos = [i.data(Qt.ItemDataRole.UserRole) for i in self.grade.selectedItems()]
-        _menu_arquivos(self, caminhos, self.abrir_pedido.emit, self.adicionar_pedido.emit)
 
-
-class BibliotecaLateral(QWidget):
-    """Aba Biblioteca do painel lateral: escolher pasta e abrir os modelos de dentro."""
+class BibliotecaLateral(QWidget, NavegadorPastas):
+    """Aba Biblioteca do painel lateral: escolher pasta e navegar pelas subpastas."""
     abrir_pedido = Signal(list)
     adicionar_pedido = Signal(list)
     MAX_ARQUIVOS = 1500
@@ -2259,13 +2696,7 @@ class BibliotecaLateral(QWidget):
         super().__init__()
         self.pastas = pastas
         self.mini = miniaturas
-        self.mini.pronta.connect(self._miniatura_pronta)
-        self.mini.cache_limpo.connect(lambda: self._carregada and self.carregar())
-        self.pastas.mudaram.connect(self._pastas_mudaram)
-        self.itens = {}
         self._carregada = False
-        self._icone_espera = _icone_texto("…")
-        self._icone_erro = _icone_texto("?", "#ff7a7a")
 
         v = QVBoxLayout(self)
         v.setContentsMargins(4, 10, 4, 4)
@@ -2274,19 +2705,33 @@ class BibliotecaLateral(QWidget):
         self.cmb_pasta = QComboBox()
         self.cmb_pasta.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.cmb_pasta.setMinimumContentsLength(8)
-        self.cmb_pasta.currentIndexChanged.connect(lambda _i: self.carregar())
+        self.cmb_pasta.currentIndexChanged.connect(self._raiz_mudou)
         linha.addWidget(self.cmb_pasta, 1)
         b = QToolButton()
         b.setText("+")
         b.setObjectName("mais")
         b.setToolTip(T("Adicionar pasta à biblioteca…"))
-        b.clicked.connect(self._adicionar_pasta)
+        b.clicked.connect(self._adicionar_pasta_nova)
         linha.addWidget(b)
+        v.addLayout(linha)
+        linha = QHBoxLayout()
+        self.b_voltar = QToolButton()
+        self.b_voltar.setText("←")
+        self.b_voltar.setObjectName("navegar")
+        self.b_voltar.setToolTip(T("Voltar para a pasta anterior"))
+        self.b_voltar.clicked.connect(self.voltar)
+        linha.addWidget(self.b_voltar, 0, Qt.AlignmentFlag.AlignTop)
+        self.lb_caminho = QLabel("")
+        self.lb_caminho.setTextFormat(Qt.TextFormat.RichText)
+        self.lb_caminho.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self.lb_caminho.setWordWrap(True)
+        self.lb_caminho.linkActivated.connect(self._caminho_clicado)
+        linha.addWidget(self.lb_caminho, 1)
         v.addLayout(linha)
         self.busca = QLineEdit()
         self.busca.setPlaceholderText(T("Buscar por nome…"))
         self.busca.setClearButtonEnabled(True)
-        self.busca.textChanged.connect(self._filtrar)
+        self.busca.textChanged.connect(self._busca_mudou)
         v.addWidget(self.busca)
         self.pilha = QStackedWidget()
         vazio = QLabel(T("Nenhuma pasta na biblioteca.\nClique em “+” para adicionar."))
@@ -2297,7 +2742,7 @@ class BibliotecaLateral(QWidget):
         self.lista.setIconSize(QSize(48, 48))
         self.lista.setUniformItemSizes(True)
         self.lista.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.lista.itemDoubleClicked.connect(lambda it: self.abrir_pedido.emit([it.data(Qt.ItemDataRole.UserRole)]))
+        self.lista.itemDoubleClicked.connect(self._duplo_clique)
         self.lista.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.lista.customContextMenuRequested.connect(self._menu)
         self.pilha.addWidget(self.lista)
@@ -2309,7 +2754,16 @@ class BibliotecaLateral(QWidget):
         dica.setObjectName("fraco")
         dica.setWordWrap(True)
         v.addWidget(dica)
+
+        self._iniciar_navegacao()
+        self._ligar_atalhos_voltar()
+        self.mini.pronta.connect(self._miniatura_chegou)
+        self.mini.cache_limpo.connect(lambda: self._carregada and self.carregar())
+        self.pastas.mudaram.connect(self._pastas_mudaram)
         self._preencher_combo()
+
+    def raiz_escolhida(self):
+        return self.cmb_pasta.currentData()
 
     def _preencher_combo(self, escolher=None):
         atual = escolher or self.cmb_pasta.currentData()
@@ -2323,13 +2777,21 @@ class BibliotecaLateral(QWidget):
         i = self.cmb_pasta.findData(atual) if atual else -1
         self.cmb_pasta.setCurrentIndex(i if i >= 0 else 0)
         self.cmb_pasta.blockSignals(False)
+        self.atual = self.raiz_escolhida()
+
+    def _raiz_mudou(self, _i):
+        self.atual = self.raiz_escolhida()
+        self.busca.blockSignals(True)
+        self.busca.clear()
+        self.busca.blockSignals(False)
+        self.carregar()
 
     def _pastas_mudaram(self):
         self._preencher_combo()
         if self._carregada:
             self.carregar()
 
-    def _adicionar_pasta(self):
+    def _adicionar_pasta_nova(self):
         pasta = QFileDialog.getExistingDirectory(self, T("Adicionar pasta à biblioteca"))
         if pasta:
             pasta = self.pastas.adicionar(pasta)
@@ -2342,56 +2804,21 @@ class BibliotecaLateral(QWidget):
             self.carregar()
 
     def carregar(self):
-        self.lista.clear()
-        self.itens = {}
         if not self.pastas.lista:
+            self.lista.clear()
             self.pilha.setCurrentIndex(0)
             self.lb_qtd.setText("")
+            self.lb_caminho.setText("")
+            self.b_voltar.setEnabled(False)
             return
         self.pilha.setCurrentIndex(1)
-        p = self.cmb_pasta.currentData()
-        pastas = [p] if p else list(self.pastas.lista)
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            arquivos = self.pastas.listar(pastas, self.MAX_ARQUIVOS)
-        finally:
-            QApplication.restoreOverrideCursor()
-        for c in arquivos:
-            it = QListWidgetItem(self._icone_espera, os.path.basename(c))
-            it.setData(Qt.ItemDataRole.UserRole, c)
-            it.setToolTip(c)
-            self.lista.addItem(it)
-            self.itens[c] = it
-            png = self.mini.pedir(c)
-            if png == "":
-                it.setIcon(self._icone_erro)
-            elif png:
-                it.setIcon(QIcon(png))
-        self._filtrar()
+        n = self._preencher()
+        self._atualizar_botao_voltar()
+        self.lb_caminho.setText(self._caminho_html())
+        self.lb_qtd.setText(T("Modelos: {n}", n=num(n, 0)) if (n or self._em_busca) else "")
 
-    def _miniatura_pronta(self, caminho, png):
-        it = self.itens.get(caminho)
-        if it is not None:
-            it.setIcon(QIcon(png) if png else self._icone_erro)
-
-    def _filtrar(self, *_):
-        t = self.busca.text().strip().lower()
-        n = 0
-        for c, it in self.itens.items():
-            mostra = t in os.path.basename(c).lower()
-            it.setHidden(not mostra)
-            n += mostra
-        self.lb_qtd.setText(T("Modelos: {n}", n=num(n, 0)))
-
-    def _menu(self, pos):
-        it = self.lista.itemAt(pos)
-        if it is None:
-            return
-        if not it.isSelected():
-            self.lista.clearSelection()
-            it.setSelected(True)
-        caminhos = [i.data(Qt.ItemDataRole.UserRole) for i in self.lista.selectedItems()]
-        _menu_arquivos(self, caminhos, self.abrir_pedido.emit, self.adicionar_pedido.emit)
+    def eventFilter(self, obj, ev):
+        return self._filtro_voltar(obj, ev) or super().eventFilter(obj, ev)
 
 
 # ---------------------------------------------------------------------------
@@ -2435,8 +2862,10 @@ class Janela(QMainWindow):
         self.abas.setCurrentIndex(1)
         self.abas.currentChanged.connect(lambda i: self.bib_lateral.mostrar() if i == 0 else None)
         v.addWidget(self.abas, 1)
-        rodape = QLabel(f"{nome_app()} {VERSAO}")
+        rodape = QLabel(f"<a href='#' style='color:gray;text-decoration:none'>{nome_app()} {VERSAO} · {AUTOR}</a>")
         rodape.setObjectName("fraco")
+        rodape.setToolTip(T("Sobre o {nome}", nome=nome_app()))
+        rodape.linkActivated.connect(lambda _l: self.mostrar_sobre())
         rodape.setAlignment(Qt.AlignmentFlag.AlignCenter)
         v.addWidget(rodape)
         pag_vis = QWidget()
@@ -2764,8 +3193,48 @@ class Janela(QMainWindow):
         lb.setWordWrap(True)
         gv.addWidget(lb)
         v.addWidget(g)
+
+        g = QGroupBox(T("Sobre"))
+        gv = QVBoxLayout(g)
+        b = QPushButton(T("Sobre o {nome}…", nome=nome_app()))
+        b.clicked.connect(self.mostrar_sobre)
+        gv.addWidget(b)
+        v.addWidget(g)
         v.addStretch(1)
         return painel
+
+    # ---- janela "Sobre" ----
+    def mostrar_sobre(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle(T("Sobre o {nome}", nome=nome_app()))
+        v = QVBoxLayout(dlg)
+        v.setContentsMargins(24, 20, 24, 16)
+        v.setSpacing(10)
+        icone = caminho_recurso("icone.ico")
+        if icone and os.path.exists(icone):
+            lb_ic = QLabel()
+            lb_ic.setPixmap(QIcon(icone).pixmap(72, 72))
+            lb_ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            v.addWidget(lb_ic)
+        titulo = QLabel(f"<b style='font-size:16pt'>{nome_app()}</b><br>{T('Versão {v}', v=VERSAO)}")
+        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(titulo)
+        texto = QLabel(
+            T("Criado por {autor}", autor=f"<b>{AUTOR}</b>") + "<br><br>"
+            + f"<a href='{LINK_GITHUB}'>{T('Código-fonte no GitHub')}</a><br>"
+            + f"<a href='{LINK_KOFI}'>{T('Apoie o projeto no Ko-fi')}</a><br><br>"
+            + f"<span style='color:gray'>{T('Programa gratuito e de código aberto, sob a licença MIT.')}<br>"
+            + f"© 2026 {AUTOR}</span>")
+        texto.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        texto.setTextFormat(Qt.TextFormat.RichText)
+        texto.setOpenExternalLinks(True)
+        texto.setWordWrap(True)
+        v.addWidget(texto)
+        botoes = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        botoes.rejected.connect(dlg.reject)
+        v.addWidget(botoes)
+        dlg.setMinimumWidth(340)
+        dlg.exec()
 
     # ---- idioma ----
     def _mudou_idioma(self, _i):
@@ -2797,7 +3266,7 @@ class Janela(QMainWindow):
         import winreg
         exe = sys.executable
         nome_exe = os.path.basename(exe)
-        progid = "VisualizadorSTL.modelo"
+        progid = "MeshDeck.modelo"
         raiz = winreg.HKEY_CURRENT_USER
         try:
             def gravar(chave, valor, nome=""):
@@ -3409,6 +3878,19 @@ def aplicar_tema(app):
         QMenu::item:selected {{ background: {COR_DESTAQUE}; color: white; }}
         QLabel#pilula {{ background: {COR_DESTAQUE}; color: white; border-radius: 8px; padding: 6px 12px; font-weight: bold; }}
         QFrame#divisoria {{ background: #33363b; max-height: 1px; min-height: 1px; margin: 4px 0; }}
+        QToolButton#navegar {{ background: #2c2f34; border: 1px solid #3c4046; border-radius: 6px;
+                               font-size: 15px; font-weight: bold; min-width: 30px; min-height: 26px; }}
+        QToolButton#navegar:hover {{ border-color: {COR_DESTAQUE}; }}
+        QToolButton#navegar:disabled {{ color: #555; }}
+        QToolButton#segmento_esq, QToolButton#segmento_dir {{ background: #2c2f34; border: 1px solid #3c4046;
+                                  padding: 4px 12px; }}
+        QToolButton#segmento_esq {{ border-top-left-radius: 6px; border-bottom-left-radius: 6px; }}
+        QToolButton#segmento_dir {{ border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-left: none; }}
+        QToolButton#segmento_esq:checked, QToolButton#segmento_dir:checked {{ background: {COR_DESTAQUE}; color: white;
+                                  border-color: {COR_DESTAQUE}; font-weight: bold; }}
+        QSlider::groove:horizontal {{ height: 4px; background: #3c4046; border-radius: 2px; }}
+        QSlider::sub-page:horizontal {{ background: {COR_DESTAQUE}; border-radius: 2px; }}
+        QSlider::handle:horizontal {{ background: white; width: 14px; height: 14px; margin: -5px 0; border-radius: 7px; }}
         QLabel#previa {{ background: #16181b; border: 1px solid #33363b; border-radius: 8px; color: #8a8f96; }}
         QToolButton#mais {{ background: {COR_DESTAQUE}; color: white; border: none; border-radius: 5px;
                             font-weight: bold; font-size: 16px; min-width: 28px; min-height: 26px; }}
@@ -3446,7 +3928,7 @@ def main():
     sys.excepthook = _gancho_erros
     if sys.platform == "win32":
         try:
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("VisualizadorSTL.1")
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("DarkDragonal.MeshDeck")
         except Exception:
             pass
     _limpar_temporarios()

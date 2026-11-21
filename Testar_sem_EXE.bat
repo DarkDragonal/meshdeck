@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Testar o Visualizador STL (sem gerar .exe)
+title Testar o MeshDeck (sem gerar .exe)
 cd /d "%~dp0"
 
 set "PY="
@@ -22,8 +22,8 @@ if errorlevel 1 (
     if errorlevel 1 goto erro
 )
 
-echo Abrindo o Visualizador STL...
-%PY% "Visualizador_STL.py" "exemplo_rosquinha.stl"
+echo Abrindo o MeshDeck...
+%PY% "MeshDeck.py" "exemplo_rosquinha.stl"
 if errorlevel 1 goto erro
 exit /b
 

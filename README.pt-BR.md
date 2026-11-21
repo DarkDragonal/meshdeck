@@ -1,11 +1,14 @@
 <div align="center">
 
-<img src="docs/icone.png" width="96" alt="Ícone do Visualizador STL">
+<img src="docs/icone.png" width="96" alt="Ícone do MeshDeck">
 
-# Visualizador STL
+# MeshDeck
 
-**Visualizador e organizador de modelos 3D para Windows, feito para quem imprime em 3D.**
+**Visualizador e biblioteca de modelos 3D para Windows, feito para quem imprime em 3D.**
 Abra, meça, posicione e redimensione seus modelos, navegue pelas suas pastas com miniaturas e envie tudo pronto para o fatiador.
+Uma alternativa gratuita ao 3D Viewer do Windows, que foi descontinuado.
+
+<sub>Antigo <i>Visualizador STL</i>.</sub>
 
 [![Ko-fi](https://img.shields.io/badge/Apoie_no-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/darkdragonal)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
@@ -26,7 +29,7 @@ Abra, meça, posicione e redimensione seus modelos, navegue pelas suas pastas co
 - **Vários objetos na mesa:** importe mais modelos, selecione com um clique e use **Organizar automaticamente** para distribuí-los sem encostar.
 - **Desfazer e refazer** (Ctrl+Z / Ctrl+Y) em todas as alterações.
 - **Volume de impressão configurável:** o objeto fica vermelho quando sai da área da mesa.
-- **Biblioteca** com miniaturas das suas pastas, busca por nome e painel de detalhes (dimensões, triângulos, tamanho e data).
+- **Biblioteca** que funciona como o Explorer: entre nas pastas (botão ←, Backspace ou o botão voltar do mouse), as pastas mostram uma colagem dos modelos de dentro, alterne entre **Miniaturas** e **Lista**, ajuste o tamanho das miniaturas com a barra ou Ctrl + roda do mouse, busque por nome e veja os detalhes (dimensões, triângulos, tamanho e data).
 - **Abrir no fatiador:** envia os objetos, já posicionados, para OrcaSlicer, PrusaSlicer, Bambu Studio, UltiMaker Cura, SuperSlicer, Creality Print ou qualquer outro programa.
 - **Exportar STL** e **salvar captura de tela (PNG)**.
 - **7 idiomas:** Português, English, Español, Français, Deutsch, Italiano e 日本語. O programa abre no idioma do Windows e pode ser trocado em **Configurações → Idioma**.
@@ -54,8 +57,8 @@ Abra, meça, posicione e redimensione seus modelos, navegue pelas suas pastas co
 ## Instalação
 
 ### Opção 1: baixar o programa pronto
-1. Na página de [Releases](../../releases/latest), baixe o arquivo **`VisualizadorSTL-…-windows.zip`**.
-2. Extraia numa pasta (por exemplo, `Documentos\Visualizador STL`) e abra o **Visualizador STL.exe**.
+1. Na página de [Releases](../../releases/latest), baixe o arquivo **`MeshDeck-…-windows.zip`**.
+2. Extraia numa pasta (por exemplo, `Documentos\MeshDeck`) e abra o **MeshDeck.exe**.
 
 > **“O Windows protegeu o computador”?** Isso aparece porque o programa não tem assinatura digital paga. Clique em **Mais informações → Executar assim mesmo**. O código é aberto e o `.exe` é montado automaticamente pelo próprio GitHub a partir dele (veja a aba *Actions*).
 
@@ -63,13 +66,13 @@ Abra, meça, posicione e redimensione seus modelos, navegue pelas suas pastas co
 1. Instale o [Python 3.10 ou mais novo](https://www.python.org/downloads/) marcando a opção **Add python.exe to PATH**.
 2. Baixe este repositório (botão **Code → Download ZIP**) e extraia.
 3. Dê dois cliques em **`Testar_sem_EXE.bat`** para abrir o programa direto.
-4. Para gerar o `.exe`, dê dois cliques em **`Gerar_EXE.bat`**. O programa fica na pasta `dist\Visualizador STL`.
+4. Para gerar o `.exe`, dê dois cliques em **`Gerar_EXE.bat`**. O programa fica na pasta `dist\MeshDeck`.
 
 Se preferir o terminal:
 
 ```bat
 pip install -r requirements.txt
-python Visualizador_STL.py
+python MeshDeck.py
 ```
 
 ### Abrir arquivos com dois cliques
@@ -78,7 +81,7 @@ No programa (versão `.exe`), vá em **Configurações → Windows → Definir c
 ## Perguntas frequentes
 
 **Onde ficam as configurações e as miniaturas?**
-Em `%APPDATA%\VisualizadorSTL`. Se algo der errado, o arquivo `erros.log` dessa pasta ajuda a descobrir o motivo. As miniaturas podem ser apagadas em **Biblioteca → Limpar cache de miniaturas**.
+Em `%APPDATA%\VisualizadorSTL` (o nome antigo foi mantido para quem atualiza não perder as configurações). Se algo der errado, o arquivo `erros.log` dessa pasta ajuda a descobrir o motivo. As miniaturas podem ser apagadas em **Biblioteca → Limpar cache de miniaturas**.
 
 **O fatiador não foi encontrado.**
 Em **Configurações → Fatiador**, escolha o programa e clique em **Procurar executável…**.
@@ -92,7 +95,7 @@ Todos os textos ficam no arquivo [`idiomas.py`](idiomas.py). Encontrou uma tradu
 
 ## Apoie o projeto
 
-Se o Visualizador STL te ajudou, considere me pagar um café ☕
+Se o MeshDeck te ajudou, considere me pagar um café ☕
 
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/darkdragonal)
 

@@ -1,4 +1,4 @@
-# Gera o "Visualizador STL.exe" num Windows do GitHub e anexa o .zip no Release.
+# Gera o "MeshDeck.exe" num Windows do GitHub e anexa o .zip no Release.
 #
 # Como usar: no GitHub, vá em Releases → "Draft a new release", crie uma tag nova
 # (ex.: v1.4) e publique. Em alguns minutos o .zip aparece sozinho no Release.
@@ -34,18 +34,18 @@ jobs:
       - name: Montar o programa
         run: >
           pyinstaller --noconfirm --clean --windowed
-          --name "Visualizador STL"
+          --name "MeshDeck"
           --icon icone.ico
           --add-data "icone.ico;."
-          Visualizador_STL.py
+          MeshDeck.py
 
       - name: Compactar
         shell: pwsh
         run: |
           $versao = if ("${{ github.event.release.tag_name }}") { "${{ github.event.release.tag_name }}" } else { "teste" }
-          Copy-Item LICENSE, README.md "dist/Visualizador STL/"
-          Compress-Archive -Path "dist/Visualizador STL" -DestinationPath "VisualizadorSTL-$versao-windows.zip"
-          echo "ZIP=VisualizadorSTL-$versao-windows.zip" >> $env:GITHUB_ENV
+          Copy-Item LICENSE, README.md "dist/MeshDeck/"
+          Compress-Archive -Path "dist/MeshDeck" -DestinationPath "MeshDeck-$versao-windows.zip"
+          echo "ZIP=MeshDeck-$versao-windows.zip" >> $env:GITHUB_ENV
 
       - name: Anexar no Release
         if: github.event_name == 'release'
@@ -57,5 +57,5 @@ jobs:
         if: github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: VisualizadorSTL-windows
+          name: MeshDeck-windows
           path: ${{ env.ZIP }}

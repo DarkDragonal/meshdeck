@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Gerar o Visualizador STL (.exe)
+title Gerar o MeshDeck (.exe)
 cd /d "%~dp0"
 
 echo ==================================================
-echo    Gerando o Visualizador STL (.exe)
+echo    Gerando o MeshDeck (.exe)
 echo ==================================================
 echo.
 
@@ -28,24 +28,24 @@ if errorlevel 1 goto erro
 echo.
 echo [2/3] Montando o programa...
 %PY% -m PyInstaller --noconfirm --clean --windowed ^
-    --name "Visualizador STL" ^
+    --name "MeshDeck" ^
     --icon "icone.ico" ^
     --add-data "icone.ico;." ^
-    "Visualizador_STL.py"
+    "MeshDeck.py"
 if errorlevel 1 goto erro
 
 echo.
 echo [3/3] Limpando arquivos temporarios...
 rmdir /s /q build >nul 2>nul
-del /q "Visualizador STL.spec" >nul 2>nul
+del /q "MeshDeck.spec" >nul 2>nul
 
 echo.
 echo ==================================================
 echo  PRONTO!
-echo  O programa ficou na pasta:  dist\Visualizador STL
-echo  Abra o arquivo "Visualizador STL.exe" que esta la.
+echo  O programa ficou na pasta:  dist\MeshDeck
+echo  Abra o arquivo "MeshDeck.exe" que esta la.
 echo ==================================================
-explorer "dist\Visualizador STL"
+explorer "dist\MeshDeck"
 pause
 exit /b
 

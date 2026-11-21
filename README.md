@@ -1,11 +1,14 @@
 <div align="center">
 
-<img src="docs/icone.png" width="96" alt="STL Viewer icon">
+<img src="docs/icone.png" width="96" alt="MeshDeck icon">
 
-# STL Viewer
+# MeshDeck
 
-**A 3D model viewer and organizer for Windows, made for 3D printing.**
+**3D model viewer & library for 3D printing, for Windows.**
 Open, measure, position and resize your models, browse your folders with thumbnails and send everything ready to your slicer.
+A free alternative to the discontinued Windows 3D Viewer.
+
+<sub>Formerly known as <i>Visualizador STL / STL Viewer</i>.</sub>
 
 [![Ko-fi](https://img.shields.io/badge/Support_on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/darkdragonal)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
@@ -26,7 +29,7 @@ Open, measure, position and resize your models, browse your folders with thumbna
 - **Multiple objects on the bed:** import more models, select with a click and use **Auto-arrange** to spread them out without touching.
 - **Undo and redo** (Ctrl+Z / Ctrl+Y) for every change.
 - **Configurable build volume:** objects turn red when they leave the print area.
-- **Library** with thumbnails of your folders, search by name and a details panel (dimensions, triangles, size and date).
+- **Library** that works like a file explorer: browse into folders (← button, Backspace or the mouse back button), folders show a collage of the models inside, switch between **Thumbnails** and **List**, resize thumbnails with a slider or Ctrl + mouse wheel, search by name and see details (dimensions, triangles, size and date).
 - **Open in slicer:** sends the objects, already positioned, to OrcaSlicer, PrusaSlicer, Bambu Studio, UltiMaker Cura, SuperSlicer, Creality Print or any other program.
 - **Export STL** and **save screenshots (PNG)**.
 - **7 languages:** Português (Brasil), English, Español, Français, Deutsch, Italiano and 日本語. The program starts in your Windows language and can be changed in **Settings → Language**.
@@ -54,8 +57,8 @@ Open, measure, position and resize your models, browse your folders with thumbna
 ## Installation
 
 ### Option 1: download the ready-to-use program
-1. On the [Releases](../../releases/latest) page, download **`VisualizadorSTL-…-windows.zip`**.
-2. Extract it to a folder (for example, `Documents\STL Viewer`) and open **Visualizador STL.exe**.
+1. On the [Releases](../../releases/latest) page, download **`MeshDeck-…-windows.zip`**.
+2. Extract it to a folder (for example, `Documents\MeshDeck`) and open **MeshDeck.exe**.
 
 > **“Windows protected your PC”?** This appears because the program is not signed with a paid certificate. Click **More info → Run anyway**. The code is open source and the `.exe` is built automatically by GitHub from it (see the *Actions* tab).
 
@@ -63,13 +66,13 @@ Open, measure, position and resize your models, browse your folders with thumbna
 1. Install [Python 3.10 or newer](https://www.python.org/downloads/), checking **Add python.exe to PATH**.
 2. Download this repository (**Code → Download ZIP**) and extract it.
 3. Double-click **`Testar_sem_EXE.bat`** to open the program directly.
-4. To build the `.exe`, double-click **`Gerar_EXE.bat`**. The program ends up in `dist\Visualizador STL`.
+4. To build the `.exe`, double-click **`Gerar_EXE.bat`**. The program ends up in `dist\MeshDeck`.
 
 Or from a terminal:
 
 ```bat
 pip install -r requirements.txt
-python Visualizador_STL.py
+python MeshDeck.py
 ```
 
 ### Open files with a double-click
@@ -78,7 +81,7 @@ In the program (`.exe` version), go to **Settings → Windows → Set as default
 ## FAQ
 
 **Where are the settings and thumbnails stored?**
-In `%APPDATA%\VisualizadorSTL`. If something goes wrong, the `erros.log` file in that folder helps find the cause. Thumbnails can be cleared in **Library → Clear thumbnail cache**.
+In `%APPDATA%\VisualizadorSTL` (the old name is kept so updates keep your settings). If something goes wrong, the `erros.log` file in that folder helps find the cause. Thumbnails can be cleared in **Library → Clear thumbnail cache**.
 
 **My slicer was not found.**
 In **Settings → Slicer**, choose the program and click **Browse for executable…**.
@@ -92,7 +95,7 @@ All texts live in [`idiomas.py`](idiomas.py). Found an odd translation or want t
 
 ## Support the project
 
-If STL Viewer helped you, consider buying me a coffee ☕
+If MeshDeck helped you, consider buying me a coffee ☕
 
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/darkdragonal)
 

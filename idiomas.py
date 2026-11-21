@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Traduções do Visualizador STL.
+Traduções do MeshDeck.
 
 Como funciona: a chave é o texto em português; para cada chave há a tradução
 nos outros idiomas. Se faltar uma tradução, o programa mostra o texto em português.
@@ -51,10 +51,30 @@ def T(texto, **valores):
 
 #  en / es / fr / de / it / ja
 TEXTOS = {
+    # ---- sobre ----
+    "Sobre": {"en": "About", "es": "Acerca de", "fr": "À propos", "de": "Über", "it": "Informazioni", "ja": "情報"},
+    "Sobre o {nome}…": {"en": "About {nome}…", "es": "Acerca de {nome}…", "fr": "À propos de {nome}…",
+                        "de": "Über {nome}…", "it": "Informazioni su {nome}…", "ja": "{nome} について…"},
+    "Sobre o {nome}": {"en": "About {nome}", "es": "Acerca de {nome}", "fr": "À propos de {nome}",
+                       "de": "Über {nome}", "it": "Informazioni su {nome}", "ja": "{nome} について"},
+    "Versão {v}": {"en": "Version {v}", "es": "Versión {v}", "fr": "Version {v}", "de": "Version {v}",
+                   "it": "Versione {v}", "ja": "バージョン {v}"},
+    "Criado por {autor}": {"en": "Created by {autor}", "es": "Creado por {autor}", "fr": "Créé par {autor}",
+                           "de": "Erstellt von {autor}", "it": "Creato da {autor}", "ja": "作成者: {autor}"},
+    "Código-fonte no GitHub": {"en": "Source code on GitHub", "es": "Código fuente en GitHub",
+                               "fr": "Code source sur GitHub", "de": "Quellcode auf GitHub",
+                               "it": "Codice sorgente su GitHub", "ja": "GitHub のソースコード"},
+    "Apoie o projeto no Ko-fi": {"en": "Support the project on Ko-fi", "es": "Apoya el proyecto en Ko-fi",
+                                 "fr": "Soutenez le projet sur Ko-fi", "de": "Unterstütze das Projekt auf Ko-fi",
+                                 "it": "Sostieni il progetto su Ko-fi", "ja": "Ko-fi でプロジェクトを支援"},
+    "Programa gratuito e de código aberto, sob a licença MIT.": {
+        "en": "Free and open-source software, under the MIT license.",
+        "es": "Programa gratuito y de código abierto, bajo la licencia MIT.",
+        "fr": "Logiciel gratuit et open source, sous licence MIT.",
+        "de": "Kostenlose Open-Source-Software unter der MIT-Lizenz.",
+        "it": "Programma gratuito e open source, con licenza MIT.",
+        "ja": "MIT ライセンスの無料オープンソースソフトウェアです。"},
     # ---- programa e páginas ----
-    "Visualizador STL": {
-        "en": "STL Viewer", "es": "Visor STL", "fr": "Visionneuse STL",
-        "de": "STL-Viewer", "it": "Visualizzatore STL", "ja": "STLビューア"},
     "Visualizador": {
         "en": "Viewer", "es": "Visor", "fr": "Visionneuse", "de": "Ansicht", "it": "Visualizzatore", "ja": "ビューア"},
     "Biblioteca": {
@@ -588,4 +608,43 @@ TEXTOS = {
     "Formato de PLY desconhecido.": {
         "en": "Unknown PLY format.", "es": "Formato PLY desconocido.", "fr": "Format PLY inconnu.",
         "de": "Unbekanntes PLY-Format.", "it": "Formato PLY sconosciuto.", "ja": "不明なPLY形式です。"},
+
+    # ---- biblioteca por pastas (v1.4) ----
+    "Voltar": {"en": "Back", "es": "Volver", "fr": "Retour", "de": "Zurück", "it": "Indietro", "ja": "戻る"},
+    "Voltar para a pasta anterior": {
+        "en": "Go back to the previous folder", "es": "Volver a la carpeta anterior", "fr": "Revenir au dossier précédent",
+        "de": "Zurück zum vorherigen Ordner", "it": "Torna alla cartella precedente", "ja": "前のフォルダーに戻る"},
+    "Resultados da busca": {"en": "Search results", "es": "Resultados de la búsqueda", "fr": "Résultats de la recherche",
+                            "de": "Suchergebnisse", "it": "Risultati della ricerca", "ja": "検索結果"},
+    "Entrar na pasta": {"en": "Open folder", "es": "Entrar en la carpeta", "fr": "Ouvrir le dossier",
+                        "de": "Ordner öffnen", "it": "Apri cartella", "ja": "フォルダーを開く"},
+    "Abrir todos juntos": {"en": "Open all together", "es": "Abrir todos juntos", "fr": "Tout ouvrir ensemble",
+                           "de": "Alle zusammen öffnen", "it": "Apri tutti insieme", "ja": "すべてまとめて開く"},
+    "Adicionar todos à mesa": {"en": "Add all to bed", "es": "Añadir todos a la cama", "fr": "Tout ajouter au plateau",
+                               "de": "Alle zum Druckbett hinzufügen", "it": "Aggiungi tutti al piatto",
+                               "ja": "すべてベッドに追加"},
+    "Mostrar no Explorer": {"en": "Show in Explorer", "es": "Mostrar en el Explorador", "fr": "Afficher dans l'Explorateur",
+                            "de": "Im Explorer anzeigen", "it": "Mostra in Esplora risorse", "ja": "エクスプローラーで表示"},
+    "Subpastas": {"en": "Subfolders", "es": "Subcarpetas", "fr": "Sous-dossiers", "de": "Unterordner", "it": "Sottocartelle",
+                  "ja": "サブフォルダー"},
+    "Tamanho total": {"en": "Total size", "es": "Tamaño total", "fr": "Taille totale", "de": "Gesamtgröße",
+                      "it": "Dimensione totale", "ja": "合計サイズ"},
+    "Abrir {n} modelos de uma vez? Isso pode demorar um pouco.": {
+        "en": "Open {n} models at once? This may take a while.",
+        "es": "¿Abrir {n} modelos a la vez? Puede tardar un poco.",
+        "fr": "Ouvrir {n} modèles à la fois ? Cela peut prendre un moment.",
+        "de": "{n} Modelle auf einmal öffnen? Das kann etwas dauern.",
+        "it": "Aprire {n} modelli contemporaneamente? Potrebbe volerci un po'.",
+        "ja": "{n} 個のモデルを一度に開きますか? 少し時間がかかる場合があります。"},
+    "Miniaturas": {"en": "Thumbnails", "es": "Miniaturas", "fr": "Miniatures", "de": "Miniaturen", "it": "Miniature",
+                   "ja": "サムネイル"},
+    "Lista": {"en": "List", "es": "Lista", "fr": "Liste", "de": "Liste", "it": "Elenco", "ja": "一覧"},
+    "Mostrar como miniaturas": {"en": "Show as thumbnails", "es": "Mostrar como miniaturas", "fr": "Afficher en miniatures",
+                                "de": "Als Miniaturen anzeigen", "it": "Mostra come miniature", "ja": "サムネイルで表示"},
+    "Mostrar como lista": {"en": "Show as list", "es": "Mostrar como lista", "fr": "Afficher en liste",
+                           "de": "Als Liste anzeigen", "it": "Mostra come elenco", "ja": "一覧で表示"},
+    "Tamanho das miniaturas (Ctrl + roda do mouse)": {
+        "en": "Thumbnail size (Ctrl + mouse wheel)", "es": "Tamaño de las miniaturas (Ctrl + rueda del ratón)",
+        "fr": "Taille des miniatures (Ctrl + molette)", "de": "Miniaturgröße (Strg + Mausrad)",
+        "it": "Dimensione miniature (Ctrl + rotella del mouse)", "ja": "サムネイルのサイズ (Ctrl + マウスホイール)"},
 }
