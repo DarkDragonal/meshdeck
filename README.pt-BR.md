@@ -5,7 +5,7 @@
 # MeshDeck
 
 **Visualizador e biblioteca de modelos 3D para Windows, feito para quem imprime em 3D.**
-Abra, meça, posicione e redimensione seus modelos, navegue pelas suas pastas com miniaturas e envie tudo pronto para o fatiador.
+Abra, meça, posicione e redimensione seus modelos, e navegue pelas suas pastas com miniaturas.
 Uma alternativa gratuita ao 3D Viewer do Windows, que foi descontinuado.
 
 <sub>Antigo <i>Visualizador STL</i>.</sub>
@@ -24,13 +24,12 @@ Uma alternativa gratuita ao 3D Viewer do Windows, que foi descontinuado.
 ## Recursos
 
 - **Formatos:** STL (texto e binário), 3MF (inclusive projetos do OrcaSlicer, Bambu Studio e PrusaSlicer), OBJ e PLY. Arquivos **.zip** do Printables e do Thingiverse abrem direto, com a escolha dos modelos de dentro.
-- **Ferramentas na própria peça:** mover, rotacionar (livre ou de 5 em 5°) e escalar arrastando os controles, como nos fatiadores.
+- **Ferramentas na própria peça:** mover, rotacionar (livre ou de 5 em 5°) e escalar arrastando os controles na própria peça.
 - **Medir distância** entre dois pontos do modelo, com ΔX, ΔY e ΔZ.
 - **Vários objetos na mesa:** importe mais modelos, selecione com um clique e use **Organizar automaticamente** para distribuí-los sem encostar.
 - **Desfazer e refazer** (Ctrl+Z / Ctrl+Y) em todas as alterações.
 - **Volume de impressão configurável:** o objeto fica vermelho quando sai da área da mesa.
 - **Biblioteca** que funciona como o Explorer: entre nas pastas (botão ←, Backspace ou o botão voltar do mouse), as pastas mostram uma colagem dos modelos de dentro, alterne entre **Miniaturas** e **Lista**, ajuste o tamanho das miniaturas com a barra ou Ctrl + roda do mouse, busque por nome e veja os detalhes (dimensões, triângulos, tamanho e data).
-- **Abrir no fatiador:** envia os objetos, já posicionados, para OrcaSlicer, PrusaSlicer, Bambu Studio, UltiMaker Cura, SuperSlicer, Creality Print ou qualquer outro programa.
 - **Exportar STL** e **salvar captura de tela (PNG)**.
 - **7 idiomas:** Português, English, Español, Français, Deutsch, Italiano e 日本語. O programa abre no idioma do Windows e pode ser trocado em **Configurações → Idioma**.
 
@@ -82,9 +81,6 @@ No programa (versão `.exe`), vá em **Configurações → Windows → Definir c
 
 **Onde ficam as configurações e as miniaturas?**
 Em `%APPDATA%\VisualizadorSTL` (o nome antigo foi mantido para quem atualiza não perder as configurações). Se algo der errado, o arquivo `erros.log` dessa pasta ajuda a descobrir o motivo. As miniaturas podem ser apagadas em **Biblioteca → Limpar cache de miniaturas**.
-
-**O fatiador não foi encontrado.**
-Em **Configurações → Fatiador**, escolha o programa e clique em **Procurar executável…**.
 
 **O modelo aparece vermelho.**
 Ele está fora do volume de impressão. Ajuste o tamanho da sua impressora em **Configurações → Volume de impressão** (o padrão é 225 × 225 × 265 mm).

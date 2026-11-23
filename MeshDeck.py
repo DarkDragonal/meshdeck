@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MeshDeck - versão 1.4 (antigo Visualizador STL)
+MeshDeck - versão 1.5 (antigo Visualizador STL)
 Abre modelos 3D (.stl, .3mf, .obj, .ply), mostra numa mesa de impressora e deixa
 mover, girar e redimensionar a peça arrastando os controles na própria peça.
 
@@ -540,40 +540,6 @@ class Cena:
             m.definir(pos=p - centro)
 
 
-# ---- salvar 3MF (usado para mandar ao fatiador com as posições) ----
-def salvar_3mf(caminho, pecas):
-    """pecas = lista de (nome, triângulos). Junta vértices repetidos para o fatiador ver a malha fechada."""
-    from xml.sax.saxutils import quoteattr
-    objetos, itens = [], []
-    for i, (nome, tris) in enumerate(pecas, start=1):
-        v = np.asarray(tris, dtype=np.float32).reshape(-1, 3)
-        unicos, inv = np.unique(v, axis=0, return_inverse=True)
-        faces = inv.reshape(-1, 3)
-        faces = faces[(faces[:, 0] != faces[:, 1]) & (faces[:, 1] != faces[:, 2]) & (faces[:, 0] != faces[:, 2])]
-        vtxt = "".join(f'<vertex x="{a:.4f}" y="{b:.4f}" z="{c:.4f}"/>' for a, b, c in unicos.tolist())
-        ttxt = "".join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in faces.tolist())
-        objetos.append(f'<object id="{i}" name={quoteattr(nome)} type="model"><mesh><vertices>{vtxt}</vertices>'
-                       f'<triangles>{ttxt}</triangles></mesh></object>')
-        itens.append(f'<item objectid="{i}"/>')
-    modelo = ('<?xml version="1.0" encoding="UTF-8"?>\n'
-              '<model unit="millimeter" xml:lang="en-US" '
-              'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
-              f'<resources>{"".join(objetos)}</resources><build>{"".join(itens)}</build></model>')
-    tipos = ('<?xml version="1.0" encoding="UTF-8"?>\n'
-             '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-             '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
-             '</Types>')
-    rels = ('<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-            '<Relationship Target="/3D/3dmodel.model" Id="rel0" '
-            'Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
-    with zipfile.ZipFile(caminho, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("[Content_Types].xml", tipos)
-        z.writestr("_rels/.rels", rels)
-        z.writestr("3D/3dmodel.model", modelo)
-
-
 # ---- arquivos .zip ----
 LIMITE_ZIP = 1024 * 1024 * 1024  # 1 GB por peça
 
@@ -741,43 +707,30 @@ LINK_KOFI = "https://ko-fi.com/darkdragonal"
 APP_NOME = "MeshDeck"   # nome do programa (não se traduz)
 # as pastas de dados e as configurações continuam com o nome antigo "VisualizadorSTL"
 # para quem atualizar não perder o cache de miniaturas nem as preferências
-VERSAO = "1.4"
+VERSAO = "1.5"
 COR_DESTAQUE = "#00ae9b"
 CORES_EIXOS = ((0.95, 0.32, 0.32), (0.36, 0.86, 0.36), (0.38, 0.58, 1.0))
 COR_HOVER = (1.0, 0.85, 0.2)
 TAM_MINIATURA = 256
 
-# Fatiadores conhecidos e onde costumam ser instalados ("*" = qualquer versão)
-FATIADORES = [
-    ("OrcaSlicer", [r"{PF}\OrcaSlicer\orca-slicer.exe", r"{PF}\OrcaSlicer\OrcaSlicer.exe",
-                    r"{LAD}\Programs\OrcaSlicer\orca-slicer.exe"]),
-    ("PrusaSlicer", [r"{PF}\Prusa3D\PrusaSlicer\prusa-slicer.exe", r"{PF}\PrusaSlicer\prusa-slicer.exe"]),
-    ("Bambu Studio", [r"{PF}\Bambu Studio\bambu-studio.exe"]),
-    ("UltiMaker Cura", [r"{PF}\UltiMaker Cura*\UltiMaker-Cura.exe", r"{PF}\Ultimaker Cura*\Ultimaker-Cura.exe",
-                        r"{PF}\Ultimaker Cura*\Cura.exe"]),
-    ("SuperSlicer", [r"{PF}\SuperSlicer\superslicer.exe", r"{PF}\SuperSlicer*\superslicer.exe"]),
-    ("Creality Print", [r"{PF}\Creality\Creality Print*\CrealityPrint.exe"]),
-]
+# ---- encaixes para outros programas ----
+# Um programa que use o MeshDeck por dentro pode acrescentar opções aos menus do botão direito
+# sem alterar este arquivo, pondo funções nestas listas:
+#   EXTRAS_MENU_MESA:     funcao(janela, menu)    -> menu da mesa (visualizador)
+#   EXTRAS_MENU_ARQUIVOS: funcao(menu, caminhos)  -> menu dos modelos da biblioteca
+# Cada função adiciona as ações dela no menu (menu.addAction(texto, callback)).
+EXTRAS_MENU_MESA = []
+EXTRAS_MENU_ARQUIVOS = []
 
 
-def procurar_fatiador(nome):
-    """Procura o executável de um fatiador conhecido nas pastas de instalação comuns."""
-    import glob
-    lugares = {"PF": [os.environ.get("ProgramFiles", r"C:\Program Files"),
-                      os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")],
-               "LAD": [os.environ.get("LOCALAPPDATA", "")]}
-    for n, padroes in FATIADORES:
-        if n != nome:
-            continue
-        for padrao in padroes:
-            chave = "PF" if padrao.startswith("{PF}") else "LAD"
-            for base in lugares[chave]:
-                if not base:
-                    continue
-                achados = sorted(glob.glob(padrao.replace("{" + chave + "}", base)), reverse=True)
-                if achados:
-                    return achados[0]
-    return None
+def _aplicar_extras(lista, *args):
+    for funcao in list(lista):
+        try:
+            funcao(*args)
+        except Exception as ex:   # um encaixe com problema não pode derrubar o menu
+            _registrar_erro(f"encaixe de menu {getattr(funcao, '__name__', funcao)}: {ex!r}")
+
+
 EXTENSOES_ABRIR = FORMATOS + (".zip",)
 
 
@@ -812,10 +765,6 @@ def num(v, casas=1):
     dec, mil = idiomas.SEPARADORES.get(idiomas.atual(), (",", "."))
     s = f"{v:,.{casas}f}"
     return s.replace(",", "\x00").replace(".", dec).replace("\x00", mil)
-
-
-def nome_seguro(texto):
-    return re.sub(r"[^\w\-]+", "_", texto).strip("_") or "modelo"
 
 
 def _normalizar(v):
@@ -1984,6 +1933,9 @@ def _menu_arquivos(parent, caminhos, abrir, adicionar):
     if len(caminhos) == 1 and sys.platform == "win32":
         menu.addSeparator()
         a_pasta = menu.addAction(T("Mostrar na pasta"))
+    if EXTRAS_MENU_ARQUIVOS:
+        menu.addSeparator()
+        _aplicar_extras(EXTRAS_MENU_ARQUIVOS, menu, list(caminhos))
     escolha = menu.exec(QCursor.pos())
     if escolha is a_abrir:
         abrir(caminhos)
@@ -3164,25 +3116,6 @@ class Janela(QMainWindow):
         grade.setColumnStretch(1, 1)
         v.addWidget(g)
 
-        g = QGroupBox(T("Fatiador"))
-        grade = QGridLayout(g)
-        grade.addWidget(QLabel(T("Programa")), 0, 0)
-        self.cmb_fatiador = QComboBox()
-        for nome, _ in FATIADORES:
-            self.cmb_fatiador.addItem(nome, nome)
-        self.cmb_fatiador.addItem(T("Outro…"), "__outro__")
-        self.cmb_fatiador.currentIndexChanged.connect(self._mudou_fatiador)
-        grade.addWidget(self.cmb_fatiador, 0, 1)
-        self.lb_fatiador = QLabel("")
-        self.lb_fatiador.setObjectName("fraco")
-        self.lb_fatiador.setWordWrap(True)
-        grade.addWidget(self.lb_fatiador, 1, 0, 1, 2)
-        b = QPushButton(T("Procurar executável…"))
-        b.clicked.connect(lambda: self._procurar_fatiador())
-        grade.addWidget(b, 2, 0, 1, 2)
-        grade.setColumnStretch(1, 1)
-        v.addWidget(g)
-
         g = QGroupBox("Windows")
         gv = QVBoxLayout(g)
         b = QPushButton(T("Definir como visualizador padrão"))
@@ -3337,9 +3270,9 @@ class Janela(QMainWindow):
         menu.addSeparator()
 
         menu.addAction(T("Salvar captura de tela (PNG)…"), self.salvar_captura)
-        nome_fat, _ = self._fatiador()
-        menu.addAction(T("Abrir no fatiador ({nome})", nome=nome_fat), self.enviar_fatiador)
-        a.setObjectName("destaque")
+        if EXTRAS_MENU_MESA:
+            menu.addSeparator()
+            _aplicar_extras(EXTRAS_MENU_MESA, self, menu)
         menu.exec(pos)
 
     # ---- configurações salvas ----
@@ -3364,7 +3297,6 @@ class Janela(QMainWindow):
         for w in [self.cmb_modo, self.cb_mesa] + self.sb_mesa:
             w.blockSignals(False)
         self._pintar_botao_cor()
-        self._carregar_fatiador()
         self.visor.enquadrar()
 
     def closeEvent(self, e):
@@ -3546,87 +3478,6 @@ class Janela(QMainWindow):
             self.statusBar().showMessage(T("Captura salva: {c}", c=caminho), 8000)
         else:
             QMessageBox.critical(self, nome_app(), T("Não foi possível salvar a captura de tela."))
-
-    # ---- fatiador (OrcaSlicer, PrusaSlicer, Cura...) ----
-    def _carregar_fatiador(self):
-        nome = str(self.cfg.value("fatiador_nome", ""))
-        if not nome and self.cfg.value("orca_exe"):          # configuração antiga (v1.2/1.3)
-            self.cfg.setValue("fatiador_nome", "OrcaSlicer")
-            self.cfg.setValue("fatiador_exe", str(self.cfg.value("orca_exe")))
-            nome = "OrcaSlicer"
-        if not nome:   # primeira vez: usa o primeiro fatiador encontrado no PC
-            nome = next((n for n, _ in FATIADORES if procurar_fatiador(n)), FATIADORES[0][0])
-            self.cfg.setValue("fatiador_nome", nome)
-        self.cmb_fatiador.blockSignals(True)
-        i = self.cmb_fatiador.findData(nome)
-        if i < 0:   # fatiador escolhido em "Outro…": entra antes da última opção
-            self.cmb_fatiador.insertItem(self.cmb_fatiador.count() - 1, nome, nome)
-            i = self.cmb_fatiador.findData(nome)
-        self.cmb_fatiador.setCurrentIndex(i)
-        self.cmb_fatiador.blockSignals(False)
-        self._mostrar_fatiador()
-
-    def _fatiador(self):
-        """(nome, executável ou None) do fatiador escolhido."""
-        nome = str(self.cfg.value("fatiador_nome", FATIADORES[0][0]))
-        exe = str(self.cfg.value("fatiador_exe", ""))
-        if exe and os.path.isfile(exe):
-            return nome, exe
-        return nome, procurar_fatiador(nome)
-
-    def _mostrar_fatiador(self):
-        _, exe = self._fatiador()
-        self.lb_fatiador.setText(exe if exe else T("Não encontrado neste computador. Use “Procurar executável…”."))
-
-    def _mudou_fatiador(self, _i):
-        nome = self.cmb_fatiador.currentData()
-        if nome == "__outro__":
-            if not self._procurar_fatiador(outro=True):
-                self._carregar_fatiador()   # cancelou: volta para o anterior
-            return
-        self.cfg.setValue("fatiador_nome", nome)
-        self.cfg.setValue("fatiador_exe", "")
-        self._mostrar_fatiador()
-
-    def _procurar_fatiador(self, outro=False):
-        nome, _ = self._fatiador()
-        titulo = T("Selecionar o executável do fatiador") if outro else T("Localizar o executável do {nome}", nome=nome)
-        exe, _ = QFileDialog.getOpenFileName(self, titulo, os.environ.get("ProgramFiles", r"C:\Program Files"),
-                                             f"{T('Programas')} (*.exe);;{T('Todos os arquivos')} (*.*)")
-        if not exe:
-            return None
-        if outro:
-            nome = os.path.splitext(os.path.basename(exe))[0]
-        self.cfg.setValue("fatiador_nome", nome)
-        self.cfg.setValue("fatiador_exe", exe)
-        self._carregar_fatiador()
-        return exe
-
-    def enviar_fatiador(self):
-        pecas = self.cena.pecas
-        if not pecas:
-            return
-        nome, exe = self._fatiador()
-        if exe is None:
-            QMessageBox.information(self, nome_app(), T("{nome} não encontrado. Indique o local do executável.", nome=nome))
-            exe = self._procurar_fatiador()
-            if exe is None:
-                return
-            nome, _ = self._fatiador()
-        # os fatiadores contam a mesa a partir do canto (0 a 225), então desloca os objetos
-        desloc = np.array([self.visor.mesa[0] / 2, self.visor.mesa[1] / 2, 0.0], dtype=np.float32)
-        base = os.path.splitext(pecas[0].nome)[0] if len(pecas) == 1 else "mesa"
-        destino = os.path.join(pasta_temporaria("fatiador"), f"{nome_seguro(base)}_{time.strftime('%H%M%S')}.3mf")
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            salvar_3mf(destino, [(m.nome, m.atual + desloc) for m in pecas])
-            subprocess.Popen([exe, destino])
-        except Exception as ex:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.critical(self, nome_app(), T("Não foi possível abrir no {nome}:", nome=nome) + f"\n{ex}")
-            return
-        QApplication.restoreOverrideCursor()
-        self.statusBar().showMessage(T("Abrindo no {nome}…", nome=nome), 6000)
 
     # ---- edição ----
     @property
@@ -3904,6 +3755,15 @@ def aplicar_tema(app):
 # ---------------------------------------------------------------------------
 #  Registro de erros (para descobrir problemas sem ver o console)
 # ---------------------------------------------------------------------------
+def _registrar_erro(texto):
+    """Anota um problema no erros.log sem interromper o programa."""
+    try:
+        with open(os.path.join(pasta_dados(), "erros.log"), "a", encoding="utf-8") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + texto + "\n")
+    except Exception:
+        pass
+
+
 def _gancho_erros(tipo, valor, tb):
     texto = "".join(traceback.format_exception(tipo, valor, tb))
     try:
@@ -3920,7 +3780,7 @@ def _gancho_erros(tipo, valor, tb):
 
 def _limpar_temporarios():
     import tempfile
-    for sub in ("zip", "fatiador", "orca", "miniaturas"):
+    for sub in ("zip", "miniaturas"):
         shutil.rmtree(os.path.join(tempfile.gettempdir(), "VisualizadorSTL", sub), ignore_errors=True)
 
 

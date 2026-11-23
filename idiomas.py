@@ -193,8 +193,6 @@ TEXTOS = {
                      "it": "File STL", "ja": "STLファイル"},
     "Imagem PNG": {"en": "PNG image", "es": "Imagen PNG", "fr": "Image PNG", "de": "PNG-Bild", "it": "Immagine PNG",
                    "ja": "PNG画像"},
-    "Programas": {"en": "Programs", "es": "Programas", "fr": "Programmes", "de": "Programme", "it": "Programmi",
-                  "ja": "プログラム"},
 
     # ---- aba Objeto ----
     "Objetos na mesa": {
@@ -293,36 +291,6 @@ TEXTOS = {
                          "it": "Profondità (Y)", "ja": "奥行き (Y)"},
     "Altura (Z)": {"en": "Height (Z)", "es": "Altura (Z)", "fr": "Hauteur (Z)", "de": "Höhe (Z)", "it": "Altezza (Z)",
                    "ja": "高さ (Z)"},
-    "Fatiador": {"en": "Slicer", "es": "Laminador", "fr": "Trancheur", "de": "Slicer", "it": "Slicer", "ja": "スライサー"},
-    "Programa": {"en": "Program", "es": "Programa", "fr": "Programme", "de": "Programm", "it": "Programma", "ja": "プログラム"},
-    "Outro…": {"en": "Other…", "es": "Otro…", "fr": "Autre…", "de": "Anderer…", "it": "Altro…", "ja": "その他…"},
-    "Procurar executável…": {"en": "Browse for executable…", "es": "Buscar ejecutable…", "fr": "Rechercher l'exécutable…",
-                             "de": "Programmdatei suchen…", "it": "Cerca eseguibile…", "ja": "実行ファイルを参照…"},
-    "Não encontrado neste computador. Use “Procurar executável…”.": {
-        "en": "Not found on this computer. Use “Browse for executable…”.",
-        "es": "No encontrado en este equipo. Usa “Buscar ejecutable…”.",
-        "fr": "Introuvable sur cet ordinateur. Utilisez « Rechercher l'exécutable… ».",
-        "de": "Auf diesem Computer nicht gefunden. „Programmdatei suchen…“ verwenden.",
-        "it": "Non trovato su questo computer. Usa “Cerca eseguibile…”.",
-        "ja": "このPCに見つかりません。「実行ファイルを参照…」を使用してください。"},
-    "Localizar o executável do {nome}": {
-        "en": "Locate the {nome} executable", "es": "Localizar el ejecutable de {nome}",
-        "fr": "Localiser l'exécutable de {nome}", "de": "Programmdatei von {nome} suchen",
-        "it": "Trova l'eseguibile di {nome}", "ja": "{nome} の実行ファイルを指定"},
-    "Selecionar o executável do fatiador": {
-        "en": "Select the slicer executable", "es": "Seleccionar el ejecutable del laminador",
-        "fr": "Sélectionner l'exécutable du trancheur", "de": "Programmdatei des Slicers wählen",
-        "it": "Seleziona l'eseguibile dello slicer", "ja": "スライサーの実行ファイルを選択"},
-    "{nome} não encontrado. Indique o local do executável.": {
-        "en": "{nome} not found. Please locate the executable.", "es": "{nome} no encontrado. Indica dónde está el ejecutable.",
-        "fr": "{nome} introuvable. Indiquez l'emplacement de l'exécutable.",
-        "de": "{nome} nicht gefunden. Bitte Programmdatei angeben.",
-        "it": "{nome} non trovato. Indica dove si trova l'eseguibile.", "ja": "{nome} が見つかりません。実行ファイルの場所を指定してください。"},
-    "Não foi possível abrir no {nome}:": {
-        "en": "Could not open in {nome}:", "es": "No se pudo abrir en {nome}:", "fr": "Impossible d'ouvrir dans {nome} :",
-        "de": "Öffnen in {nome} nicht möglich:", "it": "Impossibile aprire in {nome}:", "ja": "{nome} で開けませんでした:"},
-    "Abrindo no {nome}…": {"en": "Opening in {nome}…", "es": "Abriendo en {nome}…", "fr": "Ouverture dans {nome}…",
-                           "de": "Wird in {nome} geöffnet…", "it": "Apertura in {nome}…", "ja": "{nome} で開いています…"},
     "Idioma": {"en": "Language", "es": "Idioma", "fr": "Langue", "de": "Sprache", "it": "Lingua", "ja": "言語"},
     "O novo idioma será aplicado quando o programa for reiniciado.": {
         "en": "The new language will be applied when the program restarts.",
@@ -403,9 +371,6 @@ TEXTOS = {
     "Salvar captura de tela": {
         "en": "Save screenshot", "es": "Guardar captura de pantalla", "fr": "Enregistrer une capture d'écran",
         "de": "Bildschirmfoto speichern", "it": "Salva screenshot", "ja": "スクリーンショットを保存"},
-    "Abrir no fatiador ({nome})": {
-        "en": "Open in slicer ({nome})", "es": "Abrir en el laminador ({nome})", "fr": "Ouvrir dans le trancheur ({nome})",
-        "de": "Im Slicer öffnen ({nome})", "it": "Apri nello slicer ({nome})", "ja": "スライサーで開く ({nome})"},
     "Ação desfeita": {"en": "Undone", "es": "Acción deshecha", "fr": "Action annulée", "de": "Rückgängig gemacht",
                       "it": "Azione annullata", "ja": "元に戻しました"},
     "Ação refeita": {"en": "Redone", "es": "Acción rehecha", "fr": "Action rétablie", "de": "Wiederhergestellt",

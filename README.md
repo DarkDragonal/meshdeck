@@ -5,7 +5,7 @@
 # MeshDeck
 
 **3D model viewer & library for 3D printing, for Windows.**
-Open, measure, position and resize your models, browse your folders with thumbnails and send everything ready to your slicer.
+Open, measure, position and resize your models, and browse your folders with thumbnails.
 A free alternative to the discontinued Windows 3D Viewer.
 
 <sub>Formerly known as <i>Visualizador STL / STL Viewer</i>.</sub>
@@ -24,13 +24,12 @@ A free alternative to the discontinued Windows 3D Viewer.
 ## Features
 
 - **Formats:** STL (ASCII and binary), 3MF (including OrcaSlicer, Bambu Studio and PrusaSlicer projects), OBJ and PLY. **.zip** files from Printables and Thingiverse open directly, letting you pick the models inside.
-- **On-model tools:** move, rotate (free or in 5° steps) and scale by dragging handles, just like in slicers.
+- **On-model tools:** move, rotate (free or in 5° steps) and scale by dragging handles on the model.
 - **Measure distance** between two points on the model, with ΔX, ΔY and ΔZ.
 - **Multiple objects on the bed:** import more models, select with a click and use **Auto-arrange** to spread them out without touching.
 - **Undo and redo** (Ctrl+Z / Ctrl+Y) for every change.
 - **Configurable build volume:** objects turn red when they leave the print area.
 - **Library** that works like a file explorer: browse into folders (← button, Backspace or the mouse back button), folders show a collage of the models inside, switch between **Thumbnails** and **List**, resize thumbnails with a slider or Ctrl + mouse wheel, search by name and see details (dimensions, triangles, size and date).
-- **Open in slicer:** sends the objects, already positioned, to OrcaSlicer, PrusaSlicer, Bambu Studio, UltiMaker Cura, SuperSlicer, Creality Print or any other program.
 - **Export STL** and **save screenshots (PNG)**.
 - **7 languages:** Português (Brasil), English, Español, Français, Deutsch, Italiano and 日本語. The program starts in your Windows language and can be changed in **Settings → Language**.
 
@@ -82,9 +81,6 @@ In the program (`.exe` version), go to **Settings → Windows → Set as default
 
 **Where are the settings and thumbnails stored?**
 In `%APPDATA%\VisualizadorSTL` (the old name is kept so updates keep your settings). If something goes wrong, the `erros.log` file in that folder helps find the cause. Thumbnails can be cleared in **Library → Clear thumbnail cache**.
-
-**My slicer was not found.**
-In **Settings → Slicer**, choose the program and click **Browse for executable…**.
 
 **The model shows up in red.**
 It is outside the build volume. Set your printer size in **Settings → Build volume** (default is 225 × 225 × 265 mm).
