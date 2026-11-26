@@ -51,6 +51,14 @@ def T(texto, **valores):
 
 #  en / es / fr / de / it / ja
 TEXTOS = {
+    # ---- versão da loja ----
+    "Na versão da Microsoft Store, os arquivos .stl, .3mf, .obj e .ply já aparecem no “Abrir com”.\n\nPara usar o {app} como padrão, na tela que vai abrir procure “{app}” e escolha-o para cada formato.": {
+        "en": "In the Microsoft Store version, .stl, .3mf, .obj and .ply files already show up in “Open with”.\n\nTo make {app} the default, find “{app}” in the screen that opens and choose it for each format.",
+        "es": "En la versión de Microsoft Store, los archivos .stl, .3mf, .obj y .ply ya aparecen en “Abrir con”.\n\nPara usar {app} como predeterminado, busca “{app}” en la pantalla que se abrirá y elígelo para cada formato.",
+        "fr": "Dans la version Microsoft Store, les fichiers .stl, .3mf, .obj et .ply apparaissent déjà dans « Ouvrir avec ».\n\nPour faire de {app} l’application par défaut, cherchez « {app} » dans l’écran qui s’ouvre et choisissez-le pour chaque format.",
+        "de": "In der Microsoft-Store-Version erscheinen .stl-, .3mf-, .obj- und .ply-Dateien bereits unter „Öffnen mit“.\n\nUm {app} als Standard festzulegen, suche im sich öffnenden Fenster nach „{app}“ und wähle es für jedes Format.",
+        "it": "Nella versione del Microsoft Store, i file .stl, .3mf, .obj e .ply compaiono già in “Apri con”.\n\nPer usare {app} come predefinito, cerca “{app}” nella schermata che si apre e sceglilo per ogni formato.",
+        "ja": "Microsoft Store 版では、.stl・.3mf・.obj・.ply ファイルはすでに「プログラムから開く」に表示されます。\n\n{app} を既定にするには、開いた画面で「{app}」を探し、形式ごとに選択してください。"},
     # ---- sobre ----
     "Sobre": {"en": "About", "es": "Acerca de", "fr": "À propos", "de": "Über", "it": "Informazioni", "ja": "情報"},
     "Sobre o {nome}…": {"en": "About {nome}…", "es": "Acerca de {nome}…", "fr": "À propos de {nome}…",

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MeshDeck - versão 1.5 (antigo Visualizador STL)
+MeshDeck - versão 1.6 (antigo Visualizador STL)
 Abre modelos 3D (.stl, .3mf, .obj, .ply), mostra numa mesa de impressora e deixa
 mover, girar e redimensionar a peça arrastando os controles na própria peça.
 
@@ -707,7 +707,7 @@ LINK_KOFI = "https://ko-fi.com/darkdragonal"
 APP_NOME = "MeshDeck"   # nome do programa (não se traduz)
 # as pastas de dados e as configurações continuam com o nome antigo "VisualizadorSTL"
 # para quem atualizar não perder o cache de miniaturas nem as preferências
-VERSAO = "1.5"
+VERSAO = "1.6"
 COR_DESTAQUE = "#00ae9b"
 CORES_EIXOS = ((0.95, 0.32, 0.32), (0.36, 0.86, 0.36), (0.38, 0.58, 1.0))
 COR_HOVER = (1.0, 0.85, 0.2)
@@ -3193,6 +3193,18 @@ class Janela(QMainWindow):
         if sys.platform != "win32":
             QMessageBox.information(self, nome_app(), T("Esta opção só está disponível no Windows."))
             return
+        if instalado_pela_loja():
+            # na versão da Microsoft Store os formatos já vêm declarados no pacote;
+            # o Windows não deixa o programa mexer no registro, então abrimos a tela de padrões
+            QMessageBox.information(self, nome_app(), T(
+                "Na versão da Microsoft Store, os arquivos .stl, .3mf, .obj e .ply já aparecem no “Abrir com”.\n\n"
+                "Para usar o {app} como padrão, na tela que vai abrir procure “{app}” e escolha-o para cada formato.",
+                app=nome_app()))
+            try:
+                os.startfile("ms-settings:defaultapps")
+            except Exception:
+                pass
+            return
         if not getattr(sys, "frozen", False):
             QMessageBox.information(self, nome_app(), T("Esta opção só funciona na versão .exe do programa."))
             return
@@ -3755,6 +3767,18 @@ def aplicar_tema(app):
 # ---------------------------------------------------------------------------
 #  Registro de erros (para descobrir problemas sem ver o console)
 # ---------------------------------------------------------------------------
+def instalado_pela_loja():
+    """True quando o programa roda como pacote MSIX (versão da Microsoft Store)."""
+    if sys.platform != "win32":
+        return False
+    try:
+        tamanho = ctypes.c_uint32(0)
+        # 15700 = APPMODEL_ERROR_NO_PACKAGE (programa comum, fora da loja)
+        return ctypes.windll.kernel32.GetCurrentPackageFullName(ctypes.byref(tamanho), None) != 15700
+    except Exception:
+        return False
+
+
 def _registrar_erro(texto):
     """Anota um problema no erros.log sem interromper o programa."""
     try:

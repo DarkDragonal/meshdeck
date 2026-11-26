@@ -47,15 +47,45 @@ jobs:
           Compress-Archive -Path "dist/MeshDeck" -DestinationPath "MeshDeck-$versao-windows.zip"
           echo "ZIP=MeshDeck-$versao-windows.zip" >> $env:GITHUB_ENV
 
+      # Pacote para a Microsoft Store. Ele sai sem assinatura: quem assina é a própria
+      # loja quando o arquivo é enviado no Partner Center (não serve para instalar direto).
+      - name: Montar o pacote da Microsoft Store (.msix)
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          $nome = if ($tag) { $tag } else { "teste" }
+          $num = if ($tag) { $tag.TrimStart('v') } else { "0.0.1" }
+          $partes = @($num.Split('.') | ForEach-Object { [int]$_ })
+          while ($partes.Count -lt 3) { $partes += 0 }
+          $ver = "{0}.{1}.{2}.0" -f $partes[0], $partes[1], $partes[2]   # a loja exige o último número 0
+
+          New-Item -ItemType Directory pacote | Out-Null
+          Copy-Item -Recurse "dist/MeshDeck" "pacote/MeshDeck"
+          Copy-Item -Recurse "loja/Assets" "pacote/Assets"
+          (Get-Content loja/AppxManifest.xml -Raw).Replace("__VERSAO__", $ver) | Set-Content pacote/AppxManifest.xml -Encoding utf8
+
+          $kit = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe" |
+                 Sort-Object FullName -Descending | Select-Object -First 1
+          $bin = Split-Path $kit.FullName
+          & "$bin\makepri.exe" createconfig /cf priconfig.xml /dq en-US /o
+          & "$bin\makepri.exe" new /pr pacote /cf priconfig.xml /of pacote\resources.pri /o
+          & "$bin\makeappx.exe" pack /d pacote /p "MeshDeck-$nome.msix" /o
+          if ($LASTEXITCODE -ne 0) { throw "makeappx falhou" }
+          echo "MSIX=MeshDeck-$nome.msix" >> $env:GITHUB_ENV
+
       - name: Anexar no Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ZIP }}
+          files: |
+            ${{ env.ZIP }}
+            ${{ env.MSIX }}
 
-      - name: Guardar o .zip (quando rodado na mão)
+      - name: Guardar os arquivos (quando rodado na mão)
         if: github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
           name: MeshDeck-windows
-          path: ${{ env.ZIP }}
+          path: |
+            ${{ env.ZIP }}
+            ${{ env.MSIX }}
