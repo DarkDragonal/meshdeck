@@ -31,6 +31,7 @@ Uma alternativa gratuita ao 3D Viewer do Windows, que foi descontinuado.
 - **Volume de impressão configurável:** o objeto fica vermelho quando sai da área da mesa.
 - **Biblioteca** que funciona como o Explorer: entre nas pastas (botão ←, Backspace ou o botão voltar do mouse), as pastas mostram uma colagem dos modelos de dentro, alterne entre **Miniaturas** e **Lista**, ajuste o tamanho das miniaturas com a barra ou Ctrl + roda do mouse, busque por nome e veja os detalhes (dimensões, triângulos, tamanho e data).
 - **Exportar STL** e **salvar captura de tela (PNG)**.
+- **Para quem imprime em 3D: abrir no fatiador.** Escolha o seu fatiador em **Configurações → Fatiador** (OrcaSlicer, PrusaSlicer, Bambu Studio, UltiMaker Cura, SuperSlicer, Creality Print, CHITUBOX, Lychee Slicer ou outro). Aí o botão direito num modelo da biblioteca ou na mesa ganha **Abrir no fatiador**. Da mesa, os objetos vão já na posição em que estão. Quem só quer ver os modelos pode ignorar essa opção.
 - **7 idiomas:** Português, English, Español, Français, Deutsch, Italiano e 日本語. O programa abre no idioma do Windows e pode ser trocado em **Configurações → Idioma**.
 
 <p align="center">

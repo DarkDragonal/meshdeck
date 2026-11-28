@@ -31,6 +31,7 @@ A free alternative to the discontinued Windows 3D Viewer.
 - **Configurable build volume:** objects turn red when they leave the print area.
 - **Library** that works like a file explorer: browse into folders (← button, Backspace or the mouse back button), folders show a collage of the models inside, switch between **Thumbnails** and **List**, resize thumbnails with a slider or Ctrl + mouse wheel, search by name and see details (dimensions, triangles, size and date).
 - **Export STL** and **save screenshots (PNG)**.
+- **For 3D printing: open in your slicer.** Pick your slicer in **Settings → Slicer** (OrcaSlicer, PrusaSlicer, Bambu Studio, UltiMaker Cura, SuperSlicer, Creality Print, CHITUBOX, Lychee Slicer or any other). Right-clicking a model in the library or on the plate then shows **Open in slicer**. From the plate, objects keep their current position. If you only want to view models, you can ignore this option.
 - **7 languages:** Português (Brasil), English, Español, Français, Deutsch, Italiano and 日本語. The program starts in your Windows language and can be changed in **Settings → Language**.
 
 <p align="center">
